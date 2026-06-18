@@ -33,6 +33,15 @@ export const TEXTURE_KEYS = {
   memoryArchive: 'building_memory_archive',
   hebbHut: 'building_hebb_hut',
   signpost: 'building_signpost',
+  // Synapse Grove (Stage 2)
+  groveGround: 'tile_grove_ground',
+  dreamPool: 'tile_dream_pool',
+  neuronTree: 'decor_neuron_tree',
+  dreamAltar: 'building_dream_altar',
+  cropDreamSeed: 'crop_dream_bloom_0',
+  cropDreamSprout: 'crop_dream_bloom_1',
+  cropDreamBud: 'crop_dream_bloom_2',
+  cropDreamReady: 'crop_dream_bloom_3',
   // ui / fx
   promptE: 'ui_prompt_e',
   sparkle: 'fx_sparkle',

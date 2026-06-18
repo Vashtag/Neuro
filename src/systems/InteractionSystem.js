@@ -69,8 +69,8 @@ export default class InteractionSystem {
     const npc = this.nearestOfType(['npc']);
     if (npc) return { kind: 'npc', zone: npc };
 
-    // 2. building/object interactions (archive, sleep)
-    const building = this.nearestOfType(['archive', 'sleep']);
+    // 2. building/object interactions (archive, sleep, dream altar)
+    const building = this.nearestOfType(['archive', 'sleep', 'dream_altar']);
     if (building) return { kind: building.type, zone: building };
 
     // 3. farming tile in front of the player
@@ -135,6 +135,9 @@ export default class InteractionSystem {
         break;
       case 'sleep':
         this.handlers.onSleep?.(target.zone);
+        break;
+      case 'dream_altar':
+        this.handlers.onDreamAltar?.(target.zone);
         break;
       case 'farm':
         this.handlers.onFarm?.(target.tile);

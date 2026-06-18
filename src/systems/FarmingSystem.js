@@ -1,21 +1,14 @@
 import { GAME_CONFIG } from '../config.js';
 import { TEXTURE_KEYS } from '../data/assetManifest.js';
 import { ACTION_MESSAGES } from '../data/dialogueData.js';
+import { CROPS, DEFAULT_CROP_TYPE } from '../data/cropData.js';
 
 const T = GAME_CONFIG.tileSize;
 
-const CROP_STAGE_TEXTURE = [
-  TEXTURE_KEYS.cropSeed,
-  TEXTURE_KEYS.cropSprout,
-  TEXTURE_KEYS.cropBud,
-  TEXTURE_KEYS.cropReady
-];
-
-const WATERED_NIGHTS_REQUIRED = 2;
-
-// FarmingSystem: owns the 5x5 Memory Berry plot. Tile-based contextual actions
-// (till > plant > water > harvest), overnight growth, and per-tile visuals.
-// Crop state lives in gameState.crops so it serializes for saves.
+// FarmingSystem: owns every farmable plot (Memory Berries, Dream Blooms, ...).
+// Data-driven from cropData.js: each tile carries a cropType. Tile-based
+// contextual actions (till > plant > water > harvest), overnight growth, and
+// per-tile visuals. Crop state lives in gameState.crops so it serializes.
 export default class FarmingSystem {
   constructor(scene) {
     this.scene = scene;
@@ -29,19 +22,39 @@ export default class FarmingSystem {
   }
 
   init() {
-    // First run: populate crop tiles from the farmable map tiles.
+    // First run: populate crop tiles from the farmable map tiles, tagging each
+    // with the crop type declared by its tile.
     if (!this.state.crops || this.state.crops.length === 0) {
       const tiles = [];
       for (let y = 0; y < this.map.grid.length; y += 1) {
         for (let x = 0; x < this.map.grid[y].length; x += 1) {
           if (this.map.isFarmable(x, y)) {
-            tiles.push({ x, y, soilState: 'untilled', wateredToday: false, crop: null });
+            tiles.push({
+              x,
+              y,
+              cropType: this.tileCropType(x, y),
+              soilState: 'untilled',
+              wateredToday: false,
+              crop: null
+            });
           }
         }
       }
       this.state.crops = tiles;
     }
+    // Backfill cropType for older saves that predate multi-crop support.
+    this.state.crops.forEach((entry) => {
+      if (!entry.cropType) entry.cropType = this.tileCropType(entry.x, entry.y);
+    });
     this.state.crops.forEach((entry) => this.renderEntry(entry));
+  }
+
+  tileCropType(tx, ty) {
+    return this.map.getTileType(tx, ty).crop || DEFAULT_CROP_TYPE;
+  }
+
+  cropDef(entry) {
+    return CROPS[entry.cropType] || CROPS[DEFAULT_CROP_TYPE];
   }
 
   getEntry(tx, ty) {
@@ -81,7 +94,8 @@ export default class FarmingSystem {
     if (stage < 0) {
       pair.crop.setVisible(false);
     } else {
-      pair.crop.setTexture(CROP_STAGE_TEXTURE[stage]).setVisible(true);
+      const tex = this.cropDef(entry).stageTextures[stage];
+      pair.crop.setTexture(tex).setVisible(true);
       if (entry.crop.ready) this.attachReadyPulse(pair.crop);
       else this.detachReadyPulse(pair.crop);
     }
@@ -112,8 +126,10 @@ export default class FarmingSystem {
     const entry = this.getEntry(tile.x, tile.y);
     if (!entry) return;
 
+    const def = this.cropDef(entry);
     const inv = this.state.inventory;
     const ui = this.scene.ui;
+    const isMemory = entry.cropType === 'memory_berry';
 
     if (!inv.hasNeuroHoe) {
       ui.showMessage(ACTION_MESSAGES.cannotFarm);
@@ -132,18 +148,18 @@ export default class FarmingSystem {
 
     // 2. Plant
     if (!entry.crop) {
-      if (inv.memorySeeds <= 0) {
-        ui.showMessage(ACTION_MESSAGES.noSeeds);
+      if (inv[def.seedItem] <= 0) {
+        ui.showMessage(def.messages.noSeeds);
         this.scene.sfx('unavailable');
         return;
       }
-      inv.memorySeeds -= 1;
-      entry.crop = { type: 'memory_berry', growthStage: 0, wateredNights: 0, ready: false };
-      this.state.tutorial.plantedFirstSeed = true;
+      inv[def.seedItem] -= 1;
+      entry.crop = { type: entry.cropType, growthStage: 0, wateredNights: 0, ready: false };
+      if (isMemory) this.state.tutorial.plantedFirstSeed = true;
       this.renderEntry(entry);
-      ui.showMessage(ACTION_MESSAGES.plant);
+      ui.showMessage(def.messages.plant);
       this.scene.sfx('plant');
-      this.scene.syncUI(['seedPouch']);
+      this.scene.syncUI([def.plantSlot]);
       this.scene.updateFieldNotes();
       return;
     }
@@ -151,15 +167,15 @@ export default class FarmingSystem {
     // 3. Harvest
     if (entry.crop.ready) {
       this.detachReadyPulse(this.sprites.get(this.key(entry.x, entry.y)).crop);
-      inv.memoryBerries += 1;
+      inv[def.harvestItem] += 1;
       entry.crop = null;
       entry.wateredToday = false;
-      this.state.tutorial.harvestedFirstBerry = true;
+      if (isMemory) this.state.tutorial.harvestedFirstBerry = true;
       this.renderEntry(entry);
       this.spawnHarvestFx(entry);
-      ui.showMessage(ACTION_MESSAGES.harvest);
+      ui.showMessage(def.messages.harvest);
       this.scene.sfx('harvest');
-      this.scene.syncUI(['memoryBerry']);
+      this.scene.syncUI([def.harvestSlot]);
       this.scene.updateFieldNotes();
       return;
     }
@@ -167,7 +183,7 @@ export default class FarmingSystem {
     // 4. Water
     if (!entry.wateredToday) {
       entry.wateredToday = true;
-      this.state.tutorial.wateredFirstCrop = true;
+      if (isMemory) this.state.tutorial.wateredFirstCrop = true;
       this.renderEntry(entry);
       this.spawnWaterFx(entry);
       ui.showMessage(ACTION_MESSAGES.water);
@@ -187,8 +203,9 @@ export default class FarmingSystem {
     let grew = false;
     this.state.crops.forEach((entry) => {
       if (entry.crop && entry.wateredToday && !entry.crop.ready) {
+        const required = (CROPS[entry.crop.type] || CROPS[DEFAULT_CROP_TYPE]).wateredNightsRequired;
         entry.crop.wateredNights += 1;
-        if (entry.crop.wateredNights >= WATERED_NIGHTS_REQUIRED) {
+        if (entry.crop.wateredNights >= required) {
           entry.crop.ready = true;
         }
         grew = true;

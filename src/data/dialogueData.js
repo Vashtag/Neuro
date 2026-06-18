@@ -69,6 +69,14 @@ export const HEBB_STAGES = {
       'A few more should strengthen the pathway.'
     ]
   },
+  dream_intro: {
+    id: 'dream_intro',
+    lines: [
+      'You found the grove. Good. It grows Dream Blooms — memories that only settle after proper rest.',
+      'Take these Dream Seeds. Plant them in the grove soil, water them, and sleep. They are slow: three nights of rest, minimum. Like a good idea.',
+      'When they bloom, bring them to the Dream Altar. It has been waiting. Dramatically.'
+    ]
+  },
   fog_cleared: {
     id: 'fog_cleared',
     lines: ['Synapse Grove is just ahead. Excellent news, unless the synapses have unionized again.']
@@ -76,6 +84,13 @@ export const HEBB_STAGES = {
   fog_cleared_2: {
     id: 'fog_cleared_2',
     lines: ['Go on, take a look. Try not to step on anything electrically important.']
+  },
+  grove_done: {
+    id: 'grove_done',
+    lines: [
+      'The Dream Altar is glowing. Synapse Grove can rest properly now. So can I.',
+      'There is a path humming further north. Another time, though. Even neurons need a weekend.'
+    ]
   }
 };
 
@@ -83,7 +98,13 @@ export const HEBB_STAGES = {
 export function selectHebbStage(state) {
   if (!state.tutorial.metDrHebb) return HEBB_STAGES.intro;
 
+  if (state.grove && state.grove.restored) return HEBB_STAGES.grove_done;
+
   if (state.archive.fogCleared) {
+    // Once the player has reached the grove, Dr. Hebb hands over Dream Seeds.
+    if (state.tutorial.reachedTeaserPath && !state.tutorial.receivedDreamSeeds) {
+      return HEBB_STAGES.dream_intro;
+    }
     // Alternate the two post-fog repeat lines.
     return state.tutorial.hebbPostFogLine % 2 === 0
       ? HEBB_STAGES.fog_cleared
@@ -151,9 +172,25 @@ export const FIELD_NOTES = {
     title: 'Field Notes',
     body: 'The Forgetting Fog is clearing.\n\nExplore the restored path north of the Archive.'
   },
+  explore_grove: {
+    title: 'Field Notes',
+    body: 'Synapse Grove is open to the north.\n\nTalk to Dr. Hebb for Dream Seeds.'
+  },
+  grow_dreams: {
+    title: 'Field Notes',
+    body: 'Grow Dream Blooms in the grove.\n\nHint:\nWater them, then sleep. They need 3 nights of rest.'
+  },
+  harvest_dreams: {
+    title: 'Field Notes',
+    body: 'Harvest the glowing Dream Blooms in the grove.'
+  },
+  offer_dreams: {
+    title: 'Field Notes',
+    body: 'Bring Dream Blooms to the Dream Altar.\n\nOffered: {d}/3'
+  },
   complete: {
     title: 'Field Notes',
-    body: 'Pathway restored.\n\nSynapse Grove is now reachable.\nFurther regions coming soon.'
+    body: 'Synapse Grove restored.\n\nThe Dream Altar glows and a path hums further north.\nMore regions coming soon.'
   }
 };
 
@@ -161,4 +198,17 @@ export const FIELD_NOTES = {
 export const COMPLETION_TEXT = {
   title: 'Pathway Restored',
   body: 'The route to Synapse Grove is open.\nMore memories are waiting to grow.\n\nEnd of current build. Synapse Grove coming soon.'
+};
+
+// Stage 2 finale: Dream Altar restored.
+export const GROVE_COMPLETION_TEXT = {
+  title: 'Synapse Grove Restored',
+  body: 'The Dream Altar shines. Memories rest easy here now.\n\nEnd of current build. The path north waits for another day.'
+};
+
+// Dream Altar action messages.
+export const DREAM_MESSAGES = {
+  waiting: 'The Dream Altar is dormant. Bring it Dream Blooms grown from rest.',
+  offer: (n) => `Offered ${n} Dream ${n === 1 ? 'Bloom' : 'Blooms'} to the Altar.`,
+  restored: 'The Dream Altar awakens. Synapse Grove settles into rest.'
 };

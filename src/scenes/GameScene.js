@@ -5,14 +5,20 @@ import Player from '../objects/Player.js';
 import NPC from '../objects/NPC.js';
 import InteractionSystem from '../systems/InteractionSystem.js';
 import { PLAYER_START_TILE, INTERACTABLES } from '../data/mapData.js';
-import { createDefaultGameState, carryingBerries, hasReadyCrop } from '../data/gameState.js';
+import {
+  createDefaultGameState,
+  carryingBerries,
+  hasReadyCrop,
+  carryingDreamBlooms,
+  hasReadyCropOfType
+} from '../data/gameState.js';
 import { selectHebbStage } from '../data/dialogueData.js';
 import FarmingSystem from '../systems/FarmingSystem.js';
 import DaySystem from '../systems/DaySystem.js';
 import ArchiveSystem from '../systems/ArchiveSystem.js';
 import SoundManager from '../systems/SoundManager.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
-import { ACTION_MESSAGES, COMPLETION_TEXT } from '../data/dialogueData.js';
+import { ACTION_MESSAGES, GROVE_COMPLETION_TEXT, DREAM_MESSAGES } from '../data/dialogueData.js';
 import { TEXTURE_KEYS } from '../data/assetManifest.js';
 
 // GameScene: the world. Renders the Hippocampus Hollow map and (in later
@@ -65,6 +71,9 @@ export default class GameScene extends Phaser.Scene {
     // --- Archive ---
     this.archive = new ArchiveSystem(this);
 
+    // Restore the Dream Altar glow if loading mid Stage 2.
+    this.updateAltarVisual(true);
+
     // --- UI reference + interaction ---
     this.ui = this.scene.get(SCENES.UI);
     this.interaction = new InteractionSystem(this, this.player, this.map, this.buildHandlers());
@@ -115,6 +124,7 @@ export default class GameScene extends Phaser.Scene {
     return {
       onNpc: () => this.talkToHebb(),
       onArchive: () => this.archive.deposit(),
+      onDreamAltar: () => this.onDreamAltar(),
       onSleep: () => this.daySystem.promptSleep(),
       onSign: (zone) => msg(zone.message || 'A weathered sign.', 3200),
       onFarm: (tile) => this.farming.doAction(tile),
@@ -154,16 +164,16 @@ export default class GameScene extends Phaser.Scene {
     if (this.soundManager) this.soundManager.play(key);
   }
 
-  // Fires once when the player first steps onto the restored teaser path.
+  // Fires once when the player first steps onto the restored teaser path that
+  // leads up into Synapse Grove.
   checkTeaserReached() {
     if (!this.state.archive.fogCleared || this.state.tutorial.reachedTeaserPath) return;
     const tile = this.map.worldToTile(this.player.x, this.player.y);
-    if (tile.y <= 2) {
+    if (tile.y <= 12) {
       this.state.tutorial.reachedTeaserPath = true;
-      this.updateFieldNotes(); // -> complete
+      this.updateFieldNotes(); // -> explore_grove
       this.sfx('fogClear');
-      this.player.setInputLocked(true);
-      this.ui.showCompletion(COMPLETION_TEXT.title, COMPLETION_TEXT.body);
+      this.ui.showMessage('The fog has lifted. Synapse Grove opens to the north.', 3000);
     }
   }
 
@@ -185,12 +195,73 @@ export default class GameScene extends Phaser.Scene {
     const s = this.state;
     let step;
     if (!s.tutorial.metDrHebb) step = 'talk_to_hebb';
-    else if (s.archive.fogCleared) step = s.tutorial.reachedTeaserPath ? 'complete' : 'explore_path';
+    else if (s.archive.fogCleared) step = this.deriveGroveStep(s);
     else if (carryingBerries(s)) step = 'archive_berries';
     else if (hasReadyCrop(s)) step = 'harvest_berries';
     else step = 'grow_berries';
     s.fieldNotesStep = step;
     this.ui.refreshFieldNotes?.(s);
+  }
+
+  // Stage 2 objective progression (post-fog).
+  deriveGroveStep(s) {
+    if (!s.tutorial.reachedTeaserPath) return 'explore_path';
+    if (!s.tutorial.receivedDreamSeeds) return 'explore_grove';
+    if (s.grove.restored) return 'complete';
+    if (carryingDreamBlooms(s)) return 'offer_dreams';
+    if (hasReadyCropOfType(s, 'dream_bloom')) return 'harvest_dreams';
+    return 'grow_dreams';
+  }
+
+  // Offer carried Dream Blooms to the Dream Altar (Stage 2 goal).
+  onDreamAltar() {
+    const grove = this.state.grove;
+    const inv = this.state.inventory;
+    const carried = inv.dreamBlooms;
+
+    if (carried <= 0) {
+      this.ui.showMessage(DREAM_MESSAGES.waiting);
+      this.sfx('unavailable');
+      return;
+    }
+
+    inv.dreamBlooms = 0;
+    grove.dreamBloomsOffered = Math.min(grove.dreamBloomsOffered + carried, grove.requiredDreamBlooms);
+    this.state.tutorial.offeredFirstDream = true;
+
+    this.sfx('archive');
+    this.updateAltarVisual();
+    this.syncUI(['dreamBloom']);
+    this.updateFieldNotes();
+
+    const n = grove.dreamBloomsOffered;
+    this.ui.showMessage(`${DREAM_MESSAGES.offer(carried)} (${n}/${grove.requiredDreamBlooms})`, 2600);
+
+    if (n >= grove.requiredDreamBlooms && !grove.restored) {
+      grove.restored = true;
+      this.time.delayedCall(900, () => this.handleGroveComplete());
+    }
+  }
+
+  // Glow overlay alpha scales with offered progress.
+  updateAltarVisual(instant = false) {
+    const glow = this.map.dreamAltarGlowSprite;
+    if (!glow) return;
+    const grove = this.state.grove;
+    const ratio = grove.dreamBloomsOffered / grove.requiredDreamBlooms;
+    if (instant) glow.setAlpha(ratio);
+    else this.tweens.add({ targets: glow, alpha: ratio, duration: 700, ease: 'Sine.easeInOut' });
+  }
+
+  // Stage 2 finale: the grove is restored.
+  handleGroveComplete() {
+    this.sfx('fogClear');
+    this.updateFieldNotes(); // -> complete
+    this.ui.showMessage(DREAM_MESSAGES.restored, 2600);
+    this.player.setInputLocked(true);
+    this.time.delayedCall(1200, () => {
+      this.ui.showCompletion(GROVE_COMPLETION_TEXT.title, GROVE_COMPLETION_TEXT.body);
+    });
   }
 
   // --- Dr. Hebb dialogue ---
@@ -207,9 +278,21 @@ export default class GameScene extends Phaser.Scene {
     if (stage.id === 'intro' && !this.state.tutorial.receivedTools) {
       this.grantStarterKit();
     }
+    if (stage.id === 'dream_intro' && !this.state.tutorial.receivedDreamSeeds) {
+      this.grantDreamSeeds();
+    }
     if (stage.id === 'fog_cleared' || stage.id === 'fog_cleared_2') {
       this.state.tutorial.hebbPostFogLine += 1;
     }
+  }
+
+  // Stage 2: Dr. Hebb hands over Dream Seeds after the grove opens.
+  grantDreamSeeds() {
+    this.state.inventory.dreamSeeds = 5;
+    this.state.tutorial.receivedDreamSeeds = true;
+    this.updateFieldNotes();
+    this.syncUI(['dreamSeed']);
+    this.ui.showMessage('Received: 5 Dream Seeds. Plant them in the grove soil.', 3200);
   }
 
   // Reward after the intro: tools + 5 Memory Seeds, advance objective.
