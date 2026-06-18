@@ -19,7 +19,11 @@ export const GEN_KEYS = {
   // Synapse Grove (Stage 2)
   iconDreamSeed: 'icon_dreamseed',
   iconDreamBloom: 'icon_dreambloom',
-  dreamAltarGlow: 'building_dream_altar_glow'
+  dreamAltarGlow: 'building_dream_altar_glow',
+  // Cortex (Stage 3)
+  iconKnowledgeSeed: 'icon_knowledgeseed',
+  iconKnowledgeHerb: 'icon_knowledgeherb',
+  cortexLibraryGlow: 'building_cortex_library_glow'
 };
 
 const T = GAME_CONFIG.tileSize; // 32
@@ -161,6 +165,40 @@ function buildTiles(scene) {
     g.fillCircle(13, 9, 1.5);
     g.fillCircle(19, 13, 1.5);
     g.fillCircle(21, 17, 1.5);
+  });
+
+  // --- Cortex tiles ---
+  make(scene, TEXTURE_KEYS.cortexGround, T, T, (g) => {
+    g.fillStyle(PALETTE.cortex, 1);
+    g.fillRect(0, 0, T, T);
+    scatter(g, PALETTE.cortexAlt, 9, T, T, 2, 11);
+    scatter(g, PALETTE.cortexColumnGlow, 2, T, T, 1, 31);
+  });
+
+  // Axon gate — a glowing electric barrier (blocked until the grove restores).
+  make(scene, TEXTURE_KEYS.axonGate, T, T, (g) => {
+    g.fillStyle(PALETTE.axonGate, 0.9);
+    g.fillRect(0, 0, T, T);
+    g.lineStyle(2, PALETTE.axonGateGlow, 0.9);
+    g.beginPath();
+    g.moveTo(4, 2);
+    g.lineTo(18, 12);
+    g.lineTo(10, 18);
+    g.lineTo(26, 30);
+    g.strokePath();
+    scatter(g, PALETTE.sparkle, 4, T, T, 1, 7);
+  });
+
+  // Cortical column (transparent, drawn over cortex ground).
+  make(scene, TEXTURE_KEYS.cortexColumn, T, T, (g) => {
+    g.fillStyle(PALETTE.cortexColumn, 1);
+    g.fillRect(11, 4, 10, 26);
+    g.fillStyle(0x564a36, 1);
+    g.fillRect(9, 3, 14, 4);
+    g.fillRect(9, 27, 14, 4);
+    g.fillStyle(PALETTE.cortexColumnGlow, 0.8);
+    g.fillCircle(16, 12, 1.5);
+    g.fillCircle(16, 19, 1.5);
   });
 
   // Signpost decoration tile (also an interactable).
@@ -338,6 +376,52 @@ function buildDreamCrops(scene) {
 }
 
 // ---------------------------------------------------------------------------
+// KNOWLEDGE HERB crop stages (32x32) — leafy green with golden tips
+// ---------------------------------------------------------------------------
+function buildKnowledgeCrops(scene) {
+  make(scene, TEXTURE_KEYS.cropKnowledgeSeed, T, T, (g) => {
+    g.fillStyle(PALETTE.knowledgeCrop, 1);
+    g.fillCircle(16, 22, 3);
+    g.fillStyle(PALETTE.knowledgeCropReady, 0.9);
+    g.fillCircle(16, 21, 1);
+  });
+  make(scene, TEXTURE_KEYS.cropKnowledgeSprout, T, T, (g) => {
+    g.fillStyle(0x5a6a32, 1);
+    g.fillRect(15, 16, 2, 9);
+    g.fillStyle(PALETTE.knowledgeCrop, 1);
+    g.fillEllipse(11, 17, 7, 4);
+    g.fillEllipse(21, 17, 7, 4);
+  });
+  make(scene, TEXTURE_KEYS.cropKnowledgeBud, T, T, (g) => {
+    g.fillStyle(0x5a6a32, 1);
+    g.fillRect(15, 12, 2, 13);
+    g.fillStyle(PALETTE.knowledgeCrop, 1);
+    g.fillEllipse(10, 16, 8, 4);
+    g.fillEllipse(22, 16, 8, 4);
+    g.fillEllipse(12, 21, 7, 4);
+    g.fillEllipse(20, 21, 7, 4);
+    g.fillStyle(PALETTE.knowledgeCropReady, 1);
+    g.fillCircle(16, 10, 3);
+  });
+  make(scene, TEXTURE_KEYS.cropKnowledgeReady, T, T, (g) => {
+    g.fillStyle(0x5a6a32, 1);
+    g.fillRect(15, 12, 2, 13);
+    g.fillStyle(PALETTE.knowledgeCrop, 1);
+    g.fillEllipse(9, 17, 9, 5);
+    g.fillEllipse(23, 17, 9, 5);
+    g.fillEllipse(12, 22, 8, 4);
+    g.fillEllipse(20, 22, 8, 4);
+    g.fillStyle(PALETTE.libraryGlow, 0.3);
+    g.fillCircle(16, 9, 8);
+    g.fillStyle(PALETTE.knowledgeCropReady, 1);
+    g.fillCircle(16, 9, 5);
+    g.fillStyle(PALETTE.sparkle, 0.9);
+    g.fillCircle(14, 7, 1);
+    g.fillCircle(18, 10, 1);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // BUILDINGS
 // ---------------------------------------------------------------------------
 function buildBuildings(scene) {
@@ -424,6 +508,32 @@ function buildBuildings(scene) {
     g.fillTriangle(cw / 2 - 12, ch - 26, cw / 2 + 12, ch - 26, cw / 2, 14);
     g.fillStyle(0xfff4c4, 0.5);
     g.fillCircle(cw / 2, ch / 2, 26);
+  });
+
+  // Cortex Library — Stage 3 goal building (shelves of stored facts).
+  make(scene, TEXTURE_KEYS.cortexLibrary, cw, ch, (g) => {
+    g.fillStyle(PALETTE.libraryDim, 1);
+    g.fillRoundedRect(18, 16, cw - 36, ch - 18, 6);
+    // roof
+    g.fillStyle(0x6e5a38, 1);
+    g.fillRect(14, 14, cw - 28, 10);
+    // shelf rows with "book" ticks
+    g.fillStyle(0x3a2f1e, 1);
+    for (let ry = 30; ry < ch - 8; ry += 18) g.fillRect(26, ry, cw - 52, 12);
+    g.fillStyle(PALETTE.libraryGlow, 0.8);
+    for (let ry = 32; ry < ch - 8; ry += 18) {
+      for (let rx = 30; rx < cw - 30; rx += 9) g.fillRect(rx, ry, 3, 8);
+    }
+    // doorway
+    g.fillStyle(0x2a2114, 1);
+    g.fillRect(cw / 2 - 9, ch - 22, 18, 22);
+  });
+
+  make(scene, GEN_KEYS.cortexLibraryGlow, cw, ch, (g) => {
+    g.fillStyle(PALETTE.libraryGlow, 0.85);
+    g.fillRoundedRect(18, 16, cw - 36, ch - 18, 6);
+    g.fillStyle(0xfff4c4, 0.4);
+    g.fillCircle(cw / 2, ch / 2, 30);
   });
 
   // Glow overlay (drawn on top, alpha controlled by ArchiveSystem).
@@ -563,6 +673,26 @@ function buildIcons(scene) {
     g.fillStyle(PALETTE.sparkle, 0.9);
     g.fillCircle(9, 7, 1);
   });
+
+  make(scene, GEN_KEYS.iconKnowledgeSeed, S, S, (g) => {
+    g.fillStyle(PALETTE.knowledgeCrop, 1);
+    g.fillEllipse(12, 13, 7, 10);
+    g.fillStyle(PALETTE.knowledgeCropReady, 0.9);
+    g.fillCircle(10, 10, 1.5);
+  });
+
+  make(scene, GEN_KEYS.iconKnowledgeHerb, S, S, (g) => {
+    g.fillStyle(PALETTE.knowledgeCrop, 1);
+    g.fillEllipse(8, 14, 8, 5);
+    g.fillEllipse(16, 14, 8, 5);
+    g.fillEllipse(12, 17, 7, 4);
+    g.fillStyle(PALETTE.libraryGlow, 0.4);
+    g.fillCircle(12, 8, 6);
+    g.fillStyle(PALETTE.knowledgeCropReady, 1);
+    g.fillCircle(12, 8, 4);
+    g.fillStyle(PALETTE.sparkle, 0.9);
+    g.fillCircle(10, 7, 1);
+  });
 }
 
 // Generate every placeholder texture that did not arrive as a real asset.
@@ -571,6 +701,7 @@ export function generatePlaceholderTextures(scene) {
   buildCharacters(scene);
   buildCrops(scene);
   buildDreamCrops(scene);
+  buildKnowledgeCrops(scene);
   buildBuildings(scene);
   buildFxUi(scene);
   buildIcons(scene);

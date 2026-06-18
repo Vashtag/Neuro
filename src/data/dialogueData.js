@@ -188,9 +188,29 @@ export const FIELD_NOTES = {
     title: 'Field Notes',
     body: 'Bring Dream Blooms to the Dream Altar.\n\nOffered: {d}/3'
   },
+  cross_bridge: {
+    title: 'Field Notes',
+    body: 'Synapse Grove is restored.\n\nCross the axon bridge north to the Cortex.'
+  },
+  find_cache: {
+    title: 'Field Notes',
+    body: 'Find the Knowledge Cache in the Cortex.\n\nIt holds seeds for Knowledge Herbs.'
+  },
+  grow_knowledge: {
+    title: 'Field Notes',
+    body: 'Grow Knowledge Herbs in the Cortex.\n\nHint:\nWater them every night — skip one and they slip back.'
+  },
+  harvest_knowledge: {
+    title: 'Field Notes',
+    body: 'Harvest the ripe Knowledge Herbs.'
+  },
+  store_knowledge: {
+    title: 'Field Notes',
+    body: 'Store Knowledge Herbs in the Cortex Library.\n\nStored: {k}/3'
+  },
   complete: {
     title: 'Field Notes',
-    body: 'Synapse Grove restored.\n\nThe Dream Altar glows and a path hums further north.\nMore regions coming soon.'
+    body: 'The Cortex remembers.\n\nMemory, dreams, and knowledge all grow in Neurobloom now.\nMore regions coming soon.'
   }
 };
 
@@ -211,4 +231,19 @@ export const DREAM_MESSAGES = {
   waiting: 'The Dream Altar is dormant. Bring it Dream Blooms grown from rest.',
   offer: (n) => `Offered ${n} Dream ${n === 1 ? 'Bloom' : 'Blooms'} to the Altar.`,
   restored: 'The Dream Altar awakens. Synapse Grove settles into rest.'
+};
+
+// Stage 3 finale: Cortex Library filled.
+export const CORTEX_COMPLETION_TEXT = {
+  title: 'The Cortex Remembers',
+  body: 'The Library shelves fill with stored knowledge.\n\nEnd of current build. Thanks for tending Neurobloom.'
+};
+
+// Knowledge Cache + Cortex Library action messages.
+export const KNOWLEDGE_MESSAGES = {
+  cache: 'The Knowledge Cache opens: 5 Knowledge Seeds. Plant them in the Cortex soil.',
+  cacheEmpty: 'The Knowledge Cache is empty. Go grow what you took.',
+  storeWaiting: 'The Cortex Library is quiet. Bring it Knowledge Herbs to shelve.',
+  store: (n) => `Shelved ${n} Knowledge ${n === 1 ? 'Herb' : 'Herbs'} in the Library.`,
+  complete: 'The Cortex Library hums with stored facts. Knowledge holds.'
 };

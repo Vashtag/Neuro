@@ -10,10 +10,11 @@ const T = GAME_CONFIG.tileSize;
 // footprints encoded in MAP_DATA; kept here so each building renders as one
 // cohesive sprite rather than per-tile.
 const BUILDINGS = [
-  { key: TEXTURE_KEYS.somaCottage, tx: 16, ty: 31, tw: 5, th: 3, id: 'somaCottage' },
-  { key: TEXTURE_KEYS.memoryArchive, tx: 17, ty: 16, tw: 5, th: 3, id: 'memoryArchive' },
-  { key: TEXTURE_KEYS.hebbHut, tx: 5, ty: 20, tw: 4, th: 3, id: 'hebbHut' },
-  { key: TEXTURE_KEYS.dreamAltar, tx: 17, ty: 2, tw: 5, th: 3, id: 'dreamAltar' }
+  { key: TEXTURE_KEYS.somaCottage, tx: 16, ty: 41, tw: 5, th: 3, id: 'somaCottage' },
+  { key: TEXTURE_KEYS.memoryArchive, tx: 17, ty: 26, tw: 5, th: 3, id: 'memoryArchive' },
+  { key: TEXTURE_KEYS.hebbHut, tx: 5, ty: 30, tw: 4, th: 3, id: 'hebbHut' },
+  { key: TEXTURE_KEYS.dreamAltar, tx: 17, ty: 12, tw: 5, th: 3, id: 'dreamAltar' },
+  { key: TEXTURE_KEYS.cortexLibrary, tx: 17, ty: 1, tw: 5, th: 3, id: 'cortexLibrary' }
 ];
 
 // MapManager: renders the hard-coded tile map, places building sprites, and
@@ -27,6 +28,8 @@ export default class MapManager {
     this.colliders = null;
     this.fogColliders = [];
     this.fogSprites = [];
+    this.axonColliders = [];
+    this.axonSprites = [];
     this.buildingSprites = {};
     this.archiveGlowSprite = null;
   }
@@ -73,7 +76,7 @@ export default class MapManager {
 
         if (type.tree) {
           this.scene.add
-            .image(wx + T / 2, wy + T / 2, TEXTURE_KEYS.neuronTree)
+            .image(wx + T / 2, wy + T / 2, TEXTURE_KEYS[type.key])
             .setOrigin(0.5)
             .setDepth(wy + T);
         }
@@ -87,11 +90,21 @@ export default class MapManager {
           this.fogSprites.push(fog);
         }
 
+        if (type.gate) {
+          const gate = this.scene.add
+            .image(wx, wy, TEXTURE_KEYS.axonGate)
+            .setOrigin(0, 0)
+            .setDepth(50)
+            .setAlpha(0.9);
+          this.axonSprites.push(gate);
+        }
+
         if (!type.walkable) {
           const body = this.scene.add.rectangle(wx + T / 2, wy + T / 2, T, T);
           body.setVisible(false);
           this.colliders.add(body);
           if (char === TILE.FOG) this.fogColliders.push(body);
+          if (type.gate) this.axonColliders.push(body);
         }
       }
     }
@@ -119,6 +132,16 @@ export default class MapManager {
       if (b.id === 'dreamAltar') {
         this.dreamAltarGlowSprite = this.scene.add
           .image(b.tx * T, b.ty * T, TEX_GEN_KEYS.dreamAltarGlow)
+          .setOrigin(0, 0)
+          .setDepth((b.ty + b.th) * T + 1)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setAlpha(0);
+      }
+
+      // Cortex Library glow overlay (driven by the Stage 3 goal).
+      if (b.id === 'cortexLibrary') {
+        this.cortexLibraryGlowSprite = this.scene.add
+          .image(b.tx * T, b.ty * T, TEX_GEN_KEYS.cortexLibraryGlow)
           .setOrigin(0, 0)
           .setDepth((b.ty + b.th) * T + 1)
           .setBlendMode(Phaser.BlendModes.ADD)
@@ -182,6 +205,44 @@ export default class MapManager {
     // Fade the fog overlay sprites out with a gentle shimmer.
     const sprites = this.fogSprites;
     this.fogSprites = [];
+    if (sprites.length === 0) {
+      if (onComplete) onComplete();
+      return;
+    }
+    this.scene.tweens.add({
+      targets: sprites,
+      alpha: 0,
+      duration: 1400,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        sprites.forEach((s) => s.destroy());
+        if (onComplete) onComplete();
+      }
+    });
+  }
+
+  // Opens the axon bridge between Synapse Grove and the Cortex (Stage 3).
+  clearAxonGate(onComplete) {
+    this.axonColliders.forEach((body) => {
+      if (body.body) body.body.enable = false;
+      body.destroy();
+    });
+    this.axonColliders = [];
+
+    for (let y = 0; y < this.grid.length; y += 1) {
+      for (let x = 0; x < this.grid[y].length; x += 1) {
+        if (this.grid[y][x] === TILE.AXON) {
+          this.grid[y][x] = TILE.CORTEX;
+          this.scene.add
+            .image(x * T, y * T, TEXTURE_KEYS.cortexGround)
+            .setOrigin(0, 0)
+            .setDepth(-9);
+        }
+      }
+    }
+
+    const sprites = this.axonSprites;
+    this.axonSprites = [];
     if (sprites.length === 0) {
       if (onComplete) onComplete();
       return;
