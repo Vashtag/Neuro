@@ -89,7 +89,19 @@ export const ASSET_FILES = {
     { key: 'fx_sparkle', url: 'assets/fx/fx_sparkle.png' },
     { key: 'fx_droplet', url: 'assets/fx/fx_droplet.png' },
     { key: 'fx_orb', url: 'assets/fx/fx_orb.png' },
-    { key: 'ui_prompt_e', url: 'assets/ui/ui_prompt_e.png' }
+    { key: 'ui_prompt_e', url: 'assets/ui/ui_prompt_e.png' },
+
+    // ui panels (nineslice frames + discrete slot/checkbox pieces)
+    { key: 'ui_inventory_bar', url: 'assets/ui/ui_inventory_bar.png' },
+    { key: 'ui_field_notes', url: 'assets/ui/ui_field_notes.png' },
+    { key: 'ui_dialogue_box', url: 'assets/ui/ui_dialogue_box.png' },
+    { key: 'ui_sleep_prompt', url: 'assets/ui/ui_sleep_prompt.png' },
+    { key: 'ui_completion', url: 'assets/ui/ui_completion.png' },
+    { key: 'ui_slot_empty', url: 'assets/ui/ui_slot_empty.png' },
+    { key: 'ui_slot_active', url: 'assets/ui/ui_slot_active.png' },
+    { key: 'ui_slot_glow', url: 'assets/ui/ui_slot_glow.png' },
+    { key: 'ui_checkbox_empty', url: 'assets/ui/ui_checkbox_empty.png' },
+    { key: 'ui_checkbox_checked', url: 'assets/ui/ui_checkbox_checked.png' }
   ],
   // Audio is synthesized at runtime via the WebAudio SoundManager, so no files
   // are required. Real SFX can be added here later and the SoundManager can be
