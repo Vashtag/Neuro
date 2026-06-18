@@ -10,6 +10,7 @@ import { selectHebbStage } from '../data/dialogueData.js';
 import FarmingSystem from '../systems/FarmingSystem.js';
 import DaySystem from '../systems/DaySystem.js';
 import ArchiveSystem from '../systems/ArchiveSystem.js';
+import SoundManager from '../systems/SoundManager.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { ACTION_MESSAGES, COMPLETION_TEXT } from '../data/dialogueData.js';
 import { TEXTURE_KEYS } from '../data/assetManifest.js';
@@ -27,6 +28,11 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(PALETTE.border);
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+
+    // --- Audio (synthesized; resumes on first input) ---
+    this.soundManager = new SoundManager();
+    this.input.keyboard.once('keydown', () => this.soundManager.ensureContext());
+    this.input.once('pointerdown', () => this.soundManager.ensureContext());
 
     // --- Central game state (load save if present) ---
     this.state = SaveSystem.load();
@@ -70,6 +76,7 @@ export default class GameScene extends Phaser.Scene {
     ];
     this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.resetKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.muteKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
 
     // --- Day / sleep system ---
     this.daySystem = new DaySystem(this);
@@ -141,8 +148,10 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
-  // Placeholder SFX hook; replaced by the WebAudio SoundManager in M11.
-  sfx() {}
+  // Play a synthesized sound effect by key (no-op if audio is unavailable).
+  sfx(key) {
+    if (this.soundManager) this.soundManager.play(key);
+  }
 
   // Fires once when the player first steps onto the restored teaser path.
   checkTeaserReached() {
@@ -187,6 +196,7 @@ export default class GameScene extends Phaser.Scene {
   talkToHebb() {
     const stage = selectHebbStage(this.state);
     this.player.setInputLocked(true);
+    this.sfx('dialogue');
     this.ui.showDialogue('Dr. Hebb', stage.lines, () => this.onHebbDialogueComplete(stage));
   }
 
@@ -233,6 +243,13 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    // Toggle audio mute.
+    if (Phaser.Input.Keyboard.JustDown(this.muteKey)) {
+      this.audioMuted = !this.audioMuted;
+      this.soundManager.setMuted(this.audioMuted);
+      this.ui.showMessage(this.audioMuted ? 'Sound off' : 'Sound on', 1200);
+    }
+
     // The completion overlay captures E to dismiss and then unlocks the player.
     if (this.ui.isCompletionActive()) {
       if (
@@ -267,6 +284,7 @@ export default class GameScene extends Phaser.Scene {
         Phaser.Input.Keyboard.JustDown(this.interactKeys[0]) ||
         Phaser.Input.Keyboard.JustDown(this.interactKeys[1])
       ) {
+        this.sfx('dialogue');
         this.ui.advanceDialogue();
       }
       this.interaction.setPromptVisible(false);

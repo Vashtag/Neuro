@@ -33,6 +33,8 @@ Open the printed local URL (usually http://localhost:5173).
 |---|---|
 | WASD / Arrow keys | Move |
 | E / Space | Interact / contextual action |
+| Esc | Decline a prompt (e.g. sleep) |
+| M | Toggle sound |
 | R | Reset save (development only) |
 
 ## Build & deploy
@@ -61,4 +63,12 @@ Actions**.
 
 ## Status
 
-MVP in progress — see commit history for milestone progression.
+**MVP complete and playable end-to-end.** The full loop works: talk to Dr. Hebb →
+receive tools + 5 Memory Seeds → till/plant/water → sleep to consolidate (twice) →
+harvest Memory Berries → deposit them at the Memory Archive → Archive reaches 5/5
+→ Forgetting Fog clears → walk north into the Synapse Grove teaser path → see the
+completion message. Progress autosaves on sleep and restores on reload.
+
+All art is generated programmatically and all SFX are synthesized at runtime, so
+the game runs with no external asset files. See commit history for milestone-by-
+milestone progression.
