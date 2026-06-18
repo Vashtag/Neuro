@@ -9,7 +9,9 @@ import { createDefaultGameState, carryingBerries, hasReadyCrop } from '../data/g
 import { selectHebbStage } from '../data/dialogueData.js';
 import FarmingSystem from '../systems/FarmingSystem.js';
 import DaySystem from '../systems/DaySystem.js';
+import ArchiveSystem from '../systems/ArchiveSystem.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
+import { ACTION_MESSAGES } from '../data/dialogueData.js';
 
 // GameScene: the world. Renders the Hippocampus Hollow map and (in later
 // milestones) hosts the player, farming, interactions, archive and day systems.
@@ -50,6 +52,9 @@ export default class GameScene extends Phaser.Scene {
     this.farming = new FarmingSystem(this);
     this.farming.init();
 
+    // --- Archive ---
+    this.archive = new ArchiveSystem(this);
+
     // --- UI reference + interaction ---
     this.ui = this.scene.get(SCENES.UI);
     this.interaction = new InteractionSystem(this, this.player, this.map, this.buildHandlers());
@@ -81,7 +86,13 @@ export default class GameScene extends Phaser.Scene {
       state: () => this.state,
       talk: () => this.talkToHebb(),
       giveKit: () => this.grantStarterKit(),
-      grow: () => this.farming.growOvernight()
+      grow: () => this.farming.growOvernight(),
+      setBerries: (n) => {
+        this.state.inventory.memoryBerries = n;
+        this.syncUI();
+      },
+      tile: (x, y) => this.map.getTileChar(x, y),
+      walkable: (x, y) => this.map.isWalkable(x, y)
     };
   }
 
@@ -91,7 +102,7 @@ export default class GameScene extends Phaser.Scene {
     const msg = (m, d) => this.ui.showMessage(m, d);
     return {
       onNpc: () => this.talkToHebb(),
-      onArchive: () => msg('The Archive hums softly. It is waiting for retrieved memories.'),
+      onArchive: () => this.archive.deposit(),
       onSleep: () => this.daySystem.promptSleep(),
       onSign: (zone) => msg(zone.message || 'A weathered sign.', 3200),
       onFarm: (tile) => this.farming.doAction(tile),
@@ -101,6 +112,19 @@ export default class GameScene extends Phaser.Scene {
 
   // Placeholder SFX hook; replaced by the WebAudio SoundManager in M11.
   sfx() {}
+
+  // Reaching 5/5 archived: clear the Forgetting Fog. The teaser path + end-of-
+  // build completion are layered on in M10.
+  handleArchiveComplete() {
+    this.sfx('fogClear');
+    this.updateFieldNotes(); // -> explore_path (fogCleared now true)
+    this.ui.refreshFieldNotes?.(this.state);
+    this.map.clearFog(() => {
+      this.ui.showMessage(ACTION_MESSAGES.fogClear, 2600);
+    });
+    // Dr. Hebb remarks on the lifting fog.
+    this.time.delayedCall(700, () => this.talkToHebb());
+  }
 
   // Derive the Field Notes objective from current progress and refresh the UI.
   updateFieldNotes() {

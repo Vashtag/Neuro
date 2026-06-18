@@ -116,6 +116,7 @@ export const ACTION_MESSAGES = {
   grew: 'Some memory traces strengthened while you slept.',
   noGrowth: 'Some memories needed more attention before they could strengthen.',
   harvest: 'Retrieved: one Memory Berry.',
+  archiveSummary: (n) => `Long-term storage restored. Archived ${n} Memory ${n === 1 ? 'Berry' : 'Berries'}.`,
   archiveWaiting: 'The Archive hums softly. It is waiting for retrieved memories.',
   fogBlocked: 'The Forgetting Fog blocks the path. The Archive may need more memories first.',
   fogClear: 'The path is clear. Synapse Grove waits ahead.',
