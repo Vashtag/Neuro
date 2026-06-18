@@ -3,9 +3,16 @@ import { SCENES, GAME_CONFIG, PALETTE } from '../config.js';
 import { GEN_KEYS } from '../systems/TextureFactory.js';
 import { FIELD_NOTES } from '../data/dialogueData.js';
 
-// UIScene: transparent overlay above GameScene. Hosts the inventory bar, Field
-// Notes panel, dialogue box, prompts and transient messages. Built up across
-// milestones; M4 adds the transient message "toast".
+// Text colors: parchment panels need dark INK; purple headers/tabs use CREAM.
+const FONT = 'Trebuchet MS, sans-serif';
+const INK = '#43331c';
+const INK_SOFT = '#6a5436';
+const CREAM = '#f4ecdf';
+const GOLD = '#f6d785';
+
+// UIScene: transparent overlay above GameScene. Inventory bar, Field Notes,
+// dialogue box, confirm/sleep prompt, completion overlay and transient messages.
+// Panels use the Claude Design pixel-art frames (nineslice) with text on top.
 export default class UIScene extends Phaser.Scene {
   constructor() {
     super({ key: SCENES.UI, active: false });
@@ -27,65 +34,57 @@ export default class UIScene extends Phaser.Scene {
   // --- inventory / status bar (top) ---
   buildInventoryBar() {
     const { canvasWidth: w } = GAME_CONFIG;
-    const barH = 46;
+    const barH = 50;
     const bar = this.add.container(0, 0).setDepth(900);
 
+    // Subtle dark backing strip keeps the Day / Archive text readable.
     const bg = this.add.graphics();
-    bg.fillStyle(PALETTE.uiPanel, 0.9);
-    bg.fillRoundedRect(8, 8, w - 16, barH, 10);
+    bg.fillStyle(PALETTE.uiPanel, 0.82);
+    bg.fillRoundedRect(8, 6, w - 16, barH, 12);
     bg.lineStyle(2, PALETTE.uiPanelEdge, 1);
-    bg.strokeRoundedRect(8, 8, w - 16, barH, 10);
+    bg.strokeRoundedRect(8, 6, w - 16, barH, 12);
     bar.add(bg);
 
-    const cy = 8 + barH / 2;
+    const cy = 6 + barH / 2;
     this.invSlots = {};
 
-    // Day label.
     this.dayText = this.add
-      .text(26, cy, 'Day 1', {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '18px',
-        color: '#f6d785',
-        fontStyle: 'bold'
-      })
+      .text(26, cy, 'Day 1', { fontFamily: FONT, fontSize: '18px', color: GOLD, fontStyle: 'bold' })
       .setOrigin(0, 0.5);
     bar.add(this.dayText);
 
-    // Helper to add an icon slot with optional count text.
+    // Each tool sits inside a parchment slot frame (ui_slot_empty), which swaps
+    // to ui_slot_glow on a flash.
     const addSlot = (id, x, key, withCount) => {
+      const frame = this.add.image(x, cy, 'ui_slot_empty').setOrigin(0.5);
       const icon = this.add.image(x, cy, key).setOrigin(0.5);
+      bar.add(frame);
       bar.add(icon);
       let count = null;
       if (withCount) {
         count = this.add
-          .text(x + 14, cy + 6, '0', {
-            fontFamily: 'Trebuchet MS, sans-serif',
-            fontSize: '14px',
-            color: '#f4ecdf',
-            fontStyle: 'bold'
-          })
+          .text(x + 13, cy + 9, '0', { fontFamily: FONT, fontSize: '13px', color: CREAM, fontStyle: 'bold' })
           .setOrigin(0.5);
+        // Small dark chip behind the count for legibility on the parchment slot.
+        const chip = this.add.graphics();
+        chip.fillStyle(0x2a2140, 0.85);
+        chip.fillCircle(x + 13, cy + 9, 9);
+        bar.add(chip);
         bar.add(count);
       }
-      this.invSlots[id] = { icon, count, x };
-      return x;
+      this.invSlots[id] = { frame, icon, count, x };
     };
 
-    let x = 110;
-    const gap = 56;
+    let x = 116;
+    const gap = 50;
     addSlot('neuroHoe', x, GEN_KEYS.iconHoe, false); x += gap;
     addSlot('recallCan', x, GEN_KEYS.iconCan, false); x += gap;
     addSlot('seedPouch', x, GEN_KEYS.iconPouch, true); x += gap;
     addSlot('memoryBerry', x, GEN_KEYS.iconBerry, true); x += gap;
-    addSlot('archiveSatchel', x, GEN_KEYS.iconSatchel, false); x += gap + 6;
+    addSlot('archiveSatchel', x, GEN_KEYS.iconSatchel, false); x += gap + 8;
 
-    // Archive progress.
     this.archiveText = this.add
-      .text(x + 6, cy, 'Archive 0/5', {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '16px',
-        color: '#f4ecdf'
-      })
+      .text(x, cy, 'Archive 0/5', { fontFamily: FONT, fontSize: '16px', color: CREAM })
       .setOrigin(0, 0.5);
     bar.add(this.archiveText);
 
@@ -100,62 +99,76 @@ export default class UIScene extends Phaser.Scene {
     const setOwned = (id, owned) => {
       const s = this.invSlots[id];
       if (!s) return;
-      s.icon.setAlpha(owned ? 1 : 0.28);
+      s.icon.setAlpha(owned ? 1 : 0.25);
+      s.frame.setAlpha(owned ? 1 : 0.5);
     };
     setOwned('neuroHoe', inv.hasNeuroHoe);
     setOwned('recallCan', inv.hasRecallCan);
     setOwned('seedPouch', inv.hasSeedPouch);
     setOwned('archiveSatchel', inv.hasArchiveSatchel);
-
-    // Berry icon dims when none carried but stays "owned" once satchel exists.
     this.invSlots.memoryBerry.icon.setAlpha(inv.memoryBerries > 0 ? 1 : 0.4);
+    this.invSlots.memoryBerry.frame.setAlpha(1);
 
     if (this.invSlots.seedPouch.count) this.invSlots.seedPouch.count.setText(`${inv.memorySeeds}`);
     if (this.invSlots.memoryBerry.count) this.invSlots.memoryBerry.count.setText(`${inv.memoryBerries}`);
 
-    this.archiveText.setText(`Archive ${state.archive.memoryBerriesArchived}/${state.archive.requiredMemoryBerries}`);
+    this.archiveText.setText(
+      `Archive ${state.archive.memoryBerriesArchived}/${state.archive.requiredMemoryBerries}`
+    );
 
     flash.forEach((id) => this.flashSlot(id));
   }
 
-  // Pulse an inventory slot (and the archive label) when an action happens.
+  // Pulse a slot (swapping its frame to the glow art) when an action happens.
   flashSlot(id) {
-    let target = this.invSlots[id] && this.invSlots[id].icon;
-    if (id === 'archive') target = this.archiveText;
-    if (!target) return;
+    if (id === 'archive') {
+      this.tweens.add({ targets: this.archiveText, scale: 1.3, duration: 130, yoyo: true });
+      return;
+    }
+    const s = this.invSlots[id];
+    if (!s) return;
+    s.frame.setTexture('ui_slot_glow');
     this.tweens.add({
-      targets: target,
-      scale: 1.45,
-      duration: 130,
+      targets: [s.frame, s.icon],
+      scale: 1.35,
+      duration: 140,
       yoyo: true,
-      ease: 'Quad.easeOut'
+      ease: 'Quad.easeOut',
+      onComplete: () => s.frame.setTexture('ui_slot_empty')
     });
   }
 
   // --- Field Notes panel (top-right) ---
   buildFieldNotes() {
     const { canvasWidth: w } = GAME_CONFIG;
-    const panelW = 250;
+    const panelW = 258;
+    const panelH = 190;
     const x = w - panelW - 14;
     const y = 64;
 
     this.fieldNotesPanel = this.add.container(0, 0).setDepth(880);
-    this.fieldNotesBg = this.add.graphics();
-    this.fieldNotesTitle = this.add.text(x + 14, y + 10, 'Field Notes', {
-      fontFamily: 'Trebuchet MS, sans-serif',
-      fontSize: '16px',
-      color: '#f6d785',
-      fontStyle: 'bold'
+    // Plain stretched image (renders under Canvas + WebGL; nineslice is
+    // WebGL-only). panelW/panelH track the art's ~1.46:1 aspect to avoid distortion.
+    const bg = this.add.image(x, y, 'ui_field_notes').setOrigin(0, 0).setDisplaySize(panelW, panelH);
+
+    this.fieldNotesTitle = this.add
+      .text(x + panelW / 2, y + 23, 'Field Notes', {
+        fontFamily: FONT,
+        fontSize: '15px',
+        color: CREAM,
+        fontStyle: 'bold'
+      })
+      .setOrigin(0.5, 0.5);
+
+    // Body indented past the art's baked checkbox column on the left.
+    this.fieldNotesBody = this.add.text(x + 42, y + 46, '', {
+      fontFamily: FONT,
+      fontSize: '13px',
+      color: INK,
+      wordWrap: { width: panelW - 58 },
+      lineSpacing: 4
     });
-    this.fieldNotesBody = this.add.text(x + 14, y + 34, '', {
-      fontFamily: 'Trebuchet MS, sans-serif',
-      fontSize: '14px',
-      color: '#f4ecdf',
-      wordWrap: { width: panelW - 28 },
-      lineSpacing: 3
-    });
-    this.fieldNotesPanel.add([this.fieldNotesBg, this.fieldNotesTitle, this.fieldNotesBody]);
-    this._fnGeom = { x, y, panelW };
+    this.fieldNotesPanel.add([bg, this.fieldNotesTitle, this.fieldNotesBody]);
   }
 
   refreshFieldNotes(state) {
@@ -164,104 +177,105 @@ export default class UIScene extends Phaser.Scene {
     const body = note.body.replace('{n}', state.archive.memoryBerriesArchived);
     this.fieldNotesTitle.setText(note.title);
     this.fieldNotesBody.setText(body);
-
-    const { x, y, panelW } = this._fnGeom;
-    const h = 34 + this.fieldNotesBody.height + 16;
-    this.fieldNotesBg.clear();
-    this.fieldNotesBg.fillStyle(PALETTE.uiPanel, 0.9);
-    this.fieldNotesBg.fillRoundedRect(x, y, panelW, h, 10);
-    this.fieldNotesBg.lineStyle(2, PALETTE.uiPanelEdge, 1);
-    this.fieldNotesBg.strokeRoundedRect(x, y, panelW, h, 10);
   }
 
-  // --- dialogue box (bottom, multi-line, advanced with E/Space) ---
+  // --- dialogue box (bottom) ---
   buildDialogue() {
     const { canvasWidth: w, canvasHeight: h } = GAME_CONFIG;
-    const boxW = w - 80;
-    const boxH = 120;
-    const x = 40;
-    const y = h - boxH - 24;
+    const boxW = 720; // ~ matches the 480x120 art aspect to limit stretch
+    const boxH = 150;
+    const x = (w - boxW) / 2;
+    const y = h - boxH - 18;
 
-    this.dialogue = {
-      active: false,
-      lines: [],
-      index: 0,
-      onComplete: null
-    };
-
+    this.dialogue = { active: false, lines: [], index: 0, onComplete: null };
     this.dialogueBox = this.add.container(0, 0).setDepth(1200).setVisible(false);
 
-    const bg = this.add.graphics();
-    bg.fillStyle(PALETTE.uiPanel, 0.96);
-    bg.fillRoundedRect(x, y, boxW, boxH, 12);
-    bg.lineStyle(3, PALETTE.uiPanelEdge, 1);
-    bg.strokeRoundedRect(x, y, boxW, boxH, 12);
+    const bg = this.add.image(x, y, 'ui_dialogue_box').setOrigin(0, 0).setDisplaySize(boxW, boxH);
 
-    const speaker = this.add.text(x + 20, y + 12, '', {
-      fontFamily: 'Trebuchet MS, sans-serif',
+    // Speaker label sits over the purple tab (top-left), cream text.
+    const speaker = this.add.text(x + 34, y + 12, '', {
+      fontFamily: FONT,
       fontSize: '16px',
-      color: '#f6d785',
+      color: CREAM,
       fontStyle: 'bold'
     });
 
-    const body = this.add.text(x + 20, y + 40, '', {
-      fontFamily: 'Trebuchet MS, sans-serif',
+    const body = this.add.text(x + 30, y + 50, '', {
+      fontFamily: FONT,
       fontSize: '18px',
-      color: '#f4ecdf',
-      wordWrap: { width: boxW - 40 },
+      color: INK,
+      wordWrap: { width: boxW - 60 },
       lineSpacing: 4
     });
 
-    const hint = this.add
-      .text(x + boxW - 18, y + boxH - 14, 'E ▸', {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '14px',
-        color: '#9a86d8'
-      })
-      .setOrigin(1, 1);
-    this.tweens.add({ targets: hint, alpha: 0.3, duration: 700, yoyo: true, repeat: -1 });
-
     this.dialogueSpeaker = speaker;
     this.dialogueBody = body;
-    this.dialogueBox.add([bg, speaker, body, hint]);
+    this.dialogueBox.add([bg, speaker, body]);
   }
 
-  // --- yes/no confirm modal (e.g. sleep prompt) ---
+  isDialogueActive() {
+    return this.dialogue && this.dialogue.active;
+  }
+
+  showDialogue(speaker, lines, onComplete) {
+    this.dialogue.active = true;
+    this.dialogue.lines = lines;
+    this.dialogue.index = 0;
+    this.dialogue.onComplete = onComplete || null;
+    this.dialogueSpeaker.setText(speaker || '');
+    this.dialogueBody.setText(lines[0] || '');
+    this.dialogueBox.setVisible(true).setAlpha(0);
+    this.tweens.add({ targets: this.dialogueBox, alpha: 1, duration: 140 });
+  }
+
+  advanceDialogue() {
+    if (!this.dialogue.active) return false;
+    this.dialogue.index += 1;
+    if (this.dialogue.index >= this.dialogue.lines.length) {
+      this.dialogue.active = false;
+      this.dialogueBox.setVisible(false);
+      const cb = this.dialogue.onComplete;
+      this.dialogue.onComplete = null;
+      if (cb) cb();
+    } else {
+      this.dialogueBody.setText(this.dialogue.lines[this.dialogue.index]);
+    }
+    return true;
+  }
+
+  // --- yes/no confirm modal, themed as the sleep prompt ---
   buildConfirm() {
     const { canvasWidth: w, canvasHeight: h } = GAME_CONFIG;
     this.confirm = { active: false, onYes: null, onNo: null };
 
     this.confirmBox = this.add.container(0, 0).setDepth(1300).setVisible(false);
-    const bw = 440;
-    const bh = 120;
+    const bw = 420;
+    const bh = 192; // 210x96 art scaled ~2x
     const x = (w - bw) / 2;
     const y = (h - bh) / 2;
 
-    const bg = this.add.graphics();
-    bg.fillStyle(PALETTE.uiPanel, 0.97);
-    bg.fillRoundedRect(x, y, bw, bh, 12);
-    bg.lineStyle(3, PALETTE.uiPanelEdge, 1);
-    bg.strokeRoundedRect(x, y, bw, bh, 12);
+    const bg = this.add.image(x + bw / 2, y + bh / 2, 'ui_sleep_prompt').setDisplaySize(bw, bh);
 
+    // The sleep prompt art is a DARK night panel -> cream text.
     this.confirmText = this.add
-      .text(x + bw / 2, y + 36, '', {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '18px',
-        color: '#f4ecdf',
-        align: 'center',
-        wordWrap: { width: bw - 40 }
-      })
-      .setOrigin(0.5);
-
-    this.confirmOptions = this.add
-      .text(x + bw / 2, y + bh - 26, '', {
-        fontFamily: 'Trebuchet MS, sans-serif',
+      .text(x + bw / 2, y + 44, '', {
+        fontFamily: FONT,
         fontSize: '16px',
-        color: '#f6d785'
+        color: CREAM,
+        align: 'center',
+        wordWrap: { width: bw - 90 }
       })
       .setOrigin(0.5);
 
-    this.confirmBox.add([bg, this.confirmText, this.confirmOptions]);
+    // Labels over the two baked buttons (left = Yes/purple, right = No/dark).
+    this.confirmYesLabel = this.add
+      .text(x + bw * 0.3, y + bh - 38, '', { fontFamily: FONT, fontSize: '16px', color: CREAM, fontStyle: 'bold' })
+      .setOrigin(0.5);
+    this.confirmNoLabel = this.add
+      .text(x + bw * 0.7, y + bh - 38, '', { fontFamily: FONT, fontSize: '16px', color: CREAM })
+      .setOrigin(0.5);
+
+    this.confirmBox.add([bg, this.confirmText, this.confirmYesLabel, this.confirmNoLabel]);
   }
 
   isConfirmActive() {
@@ -273,7 +287,8 @@ export default class UIScene extends Phaser.Scene {
     this.confirm.onYes = onYes || null;
     this.confirm.onNo = onNo || null;
     this.confirmText.setText(message);
-    this.confirmOptions.setText(`[E] ${yesLabel}      [Esc] ${noLabel}`);
+    this.confirmYesLabel.setText(`[E] ${yesLabel}`);
+    this.confirmNoLabel.setText(`[Esc] ${noLabel}`);
     this.confirmBox.setVisible(true).setAlpha(0);
     this.tweens.add({ targets: this.confirmBox, alpha: 1, duration: 140 });
   }
@@ -307,43 +322,30 @@ export default class UIScene extends Phaser.Scene {
     dim.fillRect(0, 0, w, h);
 
     const bw = 560;
-    const bh = 240;
+    const bh = 180; // 300x96 art -> uniform ~1.87x scale, no distortion
     const x = (w - bw) / 2;
     const y = (h - bh) / 2;
-    const bg = this.add.graphics();
-    bg.fillStyle(PALETTE.uiPanel, 0.98);
-    bg.fillRoundedRect(x, y, bw, bh, 16);
-    bg.lineStyle(3, PALETTE.archiveGlow, 1);
-    bg.strokeRoundedRect(x, y, bw, bh, 16);
+    const bg = this.add.image(x, y, 'ui_completion').setOrigin(0, 0).setDisplaySize(bw, bh);
 
     const titleText = this.add
-      .text(w / 2, y + 44, title, {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '30px',
-        color: '#f6d785',
-        fontStyle: 'bold'
-      })
+      .text(w / 2, y + 44, title, { fontFamily: FONT, fontSize: '28px', color: '#5a3a1e', fontStyle: 'bold' })
       .setOrigin(0.5);
 
     const bodyText = this.add
-      .text(w / 2, y + 120, body, {
-        fontFamily: 'Trebuchet MS, sans-serif',
+      .text(w / 2, y + 104, body, {
+        fontFamily: FONT,
         fontSize: '17px',
-        color: '#f4ecdf',
+        color: INK,
         align: 'center',
         lineSpacing: 6,
-        wordWrap: { width: bw - 60 }
+        wordWrap: { width: bw - 90 }
       })
       .setOrigin(0.5);
 
     const hint = this.add
-      .text(w / 2, y + bh - 22, 'Press E to continue', {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '14px',
-        color: '#9a86d8'
-      })
+      .text(w / 2, y + bh - 26, 'Press E to continue', { fontFamily: FONT, fontSize: '14px', color: INK_SOFT })
       .setOrigin(0.5);
-    this.tweens.add({ targets: hint, alpha: 0.3, duration: 800, yoyo: true, repeat: -1 });
+    this.tweens.add({ targets: hint, alpha: 0.4, duration: 800, yoyo: true, repeat: -1 });
 
     c.add([dim, bg, titleText, bodyText, hint]);
     this.completionBox = c;
@@ -355,64 +357,19 @@ export default class UIScene extends Phaser.Scene {
     this.completion.active = false;
     if (this.completionBox) {
       const box = this.completionBox;
-      this.tweens.add({
-        targets: box,
-        alpha: 0,
-        duration: 300,
-        onComplete: () => box.destroy()
-      });
+      this.tweens.add({ targets: box, alpha: 0, duration: 300, onComplete: () => box.destroy() });
     }
     return true;
   }
 
-  isDialogueActive() {
-    return this.dialogue && this.dialogue.active;
-  }
-
-  showDialogue(speaker, lines, onComplete) {
-    this.dialogue.active = true;
-    this.dialogue.lines = lines;
-    this.dialogue.index = 0;
-    this.dialogue.onComplete = onComplete || null;
-    this.dialogueSpeaker.setText(speaker || '');
-    this.dialogueBody.setText(lines[0] || '');
-    this.dialogueBox.setVisible(true).setAlpha(0);
-    this.tweens.add({ targets: this.dialogueBox, alpha: 1, duration: 140 });
-  }
-
-  // Advance to the next line, or close and fire onComplete. Returns true if it
-  // consumed the input (so the caller skips other interactions).
-  advanceDialogue() {
-    if (!this.dialogue.active) return false;
-    this.dialogue.index += 1;
-    if (this.dialogue.index >= this.dialogue.lines.length) {
-      this.dialogue.active = false;
-      this.dialogueBox.setVisible(false);
-      const cb = this.dialogue.onComplete;
-      this.dialogue.onComplete = null;
-      if (cb) cb();
-    } else {
-      this.dialogueBody.setText(this.dialogue.lines[this.dialogue.index]);
-    }
-    return true;
-  }
-
-  // --- transient message toast (bottom-center) ---
+  // --- transient message toast (bottom-center, code-drawn dark) ---
   buildToast() {
     const { canvasWidth: w, canvasHeight: h } = GAME_CONFIG;
     this.toast = this.add.container(w / 2, h - 96).setDepth(1000).setAlpha(0);
-
     const bg = this.add.graphics();
     this.toastBg = bg;
-
     const text = this.add
-      .text(0, 0, '', {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '17px',
-        color: '#f4ecdf',
-        align: 'center',
-        wordWrap: { width: 520 }
-      })
+      .text(0, 0, '', { fontFamily: FONT, fontSize: '17px', color: CREAM, align: 'center', wordWrap: { width: 520 } })
       .setOrigin(0.5);
     this.toastText = text;
     this.toast.add([bg, text]);
@@ -422,8 +379,6 @@ export default class UIScene extends Phaser.Scene {
   showMessage(message, duration = 2200) {
     if (!this.toast) return;
     this.toastText.setText(message);
-
-    // Resize the rounded background to fit the text.
     const pad = 16;
     const tw = Math.max(this.toastText.width + pad * 2, 120);
     const th = this.toastText.height + pad * 1.4;
@@ -442,12 +397,7 @@ export default class UIScene extends Phaser.Scene {
       ease: 'Sine.easeOut',
       onComplete: () => {
         this.time.delayedCall(duration, () => {
-          this.toastTween = this.tweens.add({
-            targets: this.toast,
-            alpha: 0,
-            duration: 280,
-            ease: 'Sine.easeIn'
-          });
+          this.toastTween = this.tweens.add({ targets: this.toast, alpha: 0, duration: 280, ease: 'Sine.easeIn' });
         });
       }
     });

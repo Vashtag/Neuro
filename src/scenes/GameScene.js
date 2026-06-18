@@ -103,7 +103,8 @@ export default class GameScene extends Phaser.Scene {
         this.syncUI();
       },
       tile: (x, y) => this.map.getTileChar(x, y),
-      walkable: (x, y) => this.map.isWalkable(x, y)
+      walkable: (x, y) => this.map.isWalkable(x, y),
+      promptSleep: () => this.daySystem.promptSleep()
     };
   }
 
