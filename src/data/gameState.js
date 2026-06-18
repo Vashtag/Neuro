@@ -24,6 +24,9 @@ export function createDefaultGameState() {
       requiredDreamBlooms: 3,
       restored: false
     },
+    codex: {
+      seen: []
+    },
     tutorial: {
       metDrHebb: false,
       receivedTools: false,
@@ -31,6 +34,7 @@ export function createDefaultGameState() {
       wateredFirstCrop: false,
       sleptFirstTime: false,
       harvestedFirstBerry: false,
+      harvestedFirstDream: false,
       depositedFirstBerry: false,
       reachedTeaserPath: false,
       hebbPostFogLine: 0,

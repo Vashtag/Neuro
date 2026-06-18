@@ -20,6 +20,7 @@ import SoundManager from '../systems/SoundManager.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { ACTION_MESSAGES, GROVE_COMPLETION_TEXT, DREAM_MESSAGES } from '../data/dialogueData.js';
 import { TEXTURE_KEYS } from '../data/assetManifest.js';
+import { CODEX_ENTRIES } from '../data/codexData.js';
 
 // GameScene: the world. Renders the Hippocampus Hollow map and (in later
 // milestones) hosts the player, farming, interactions, archive and day systems.
@@ -86,9 +87,13 @@ export default class GameScene extends Phaser.Scene {
     this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.resetKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.muteKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
+    this.codexKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J);
 
     // --- Day / sleep system ---
     this.daySystem = new DaySystem(this);
+
+    // Mark already-discovered Field Guide entries as seen (no toast on load).
+    this.syncCodex(true);
 
     // Reflect any loaded progress in the Field Notes objective.
     this.updateFieldNotes();
@@ -113,7 +118,8 @@ export default class GameScene extends Phaser.Scene {
       },
       tile: (x, y) => this.map.getTileChar(x, y),
       walkable: (x, y) => this.map.isWalkable(x, y),
-      promptSleep: () => this.daySystem.promptSleep()
+      promptSleep: () => this.daySystem.promptSleep(),
+      openCodex: () => this.openCodex()
     };
   }
 
@@ -201,6 +207,29 @@ export default class GameScene extends Phaser.Scene {
     else step = 'grow_berries';
     s.fieldNotesStep = step;
     this.ui.refreshFieldNotes?.(s);
+    this.syncCodex(false);
+  }
+
+  // Reveal newly-discovered Field Guide entries. Silent on load; toasts the
+  // first time each concept is encountered during play.
+  syncCodex(silent = false) {
+    const seen = this.state.codex.seen;
+    CODEX_ENTRIES.forEach((e) => {
+      if (e.discovered(this.state) && !seen.includes(e.id)) {
+        seen.push(e.id);
+        if (!silent) {
+          this.ui.showMessage(`New Field Guide entry: ${e.title} — press J to read.`, 2800);
+          this.sfx('dialogue');
+        }
+      }
+    });
+  }
+
+  openCodex() {
+    this.syncCodex(true);
+    this.player.setInputLocked(true);
+    this.ui.openCodex(this.state);
+    this.sfx('dialogue');
   }
 
   // Stage 2 objective progression (post-fog).
@@ -310,6 +339,8 @@ export default class GameScene extends Phaser.Scene {
 
     this.syncUI(['seedPouch']);
     this.ui.showMessage('Received: NeuroHoe, Recall Can, Seed Pouch, Archive Satchel, and 5 Memory Seeds.', 3400);
+    // Surface the Dr. Hebb Field Guide entry after the kit message clears.
+    this.time.delayedCall(3500, () => this.syncCodex(false));
   }
 
   // Refresh all stateful UI. `flash` is an optional list of inventory slot ids
@@ -332,6 +363,20 @@ export default class GameScene extends Phaser.Scene {
       this.audioMuted = !this.audioMuted;
       this.soundManager.setMuted(this.audioMuted);
       this.ui.showMessage(this.audioMuted ? 'Sound off' : 'Sound on', 1200);
+    }
+
+    // While the Field Guide is open, J or Esc closes it.
+    if (this.ui.isCodexActive()) {
+      if (
+        Phaser.Input.Keyboard.JustDown(this.codexKey) ||
+        Phaser.Input.Keyboard.JustDown(this.escKey)
+      ) {
+        this.ui.closeCodex();
+        this.player.setInputLocked(false);
+      }
+      this.interaction.setPromptVisible(false);
+      this.updateProbe(this.probeSnapshot());
+      return;
     }
 
     // The completion overlay captures E to dismiss and then unlocks the player.
@@ -376,6 +421,13 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    // Open the Field Guide (only when no modal is active — gated above).
+    if (Phaser.Input.Keyboard.JustDown(this.codexKey)) {
+      this.openCodex();
+      this.updateProbe(this.probeSnapshot());
+      return;
+    }
+
     this.interaction.update();
     this.checkTeaserReached();
 
@@ -401,7 +453,9 @@ export default class GameScene extends Phaser.Scene {
       berries: this.state.inventory.memoryBerries,
       archived: this.state.archive.memoryBerriesArchived,
       metHebb: this.state.tutorial.metDrHebb,
-      fieldNotes: this.state.fieldNotesStep
+      fieldNotes: this.state.fieldNotesStep,
+      codexActive: this.ui.isCodexActive(),
+      codexSeen: this.state.codex.seen.length
     };
   }
 
