@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { SCENES, GAME_CONFIG, PALETTE } from '../config.js';
+import { GEN_KEYS } from '../systems/TextureFactory.js';
+import { FIELD_NOTES } from '../data/dialogueData.js';
 
 // UIScene: transparent overlay above GameScene. Hosts the inventory bar, Field
 // Notes panel, dialogue box, prompts and transient messages. Built up across
@@ -11,8 +13,164 @@ export default class UIScene extends Phaser.Scene {
 
   create() {
     this.scene.bringToTop();
+    this.buildInventoryBar();
+    this.buildFieldNotes();
     this.buildToast();
     this.buildDialogue();
+
+    // Populate from the (already created) GameScene state.
+    const gs = this.scene.get(SCENES.GAME);
+    if (gs && gs.state && gs.syncUI) gs.syncUI();
+  }
+
+  // --- inventory / status bar (top) ---
+  buildInventoryBar() {
+    const { canvasWidth: w } = GAME_CONFIG;
+    const barH = 46;
+    const bar = this.add.container(0, 0).setDepth(900);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(PALETTE.uiPanel, 0.9);
+    bg.fillRoundedRect(8, 8, w - 16, barH, 10);
+    bg.lineStyle(2, PALETTE.uiPanelEdge, 1);
+    bg.strokeRoundedRect(8, 8, w - 16, barH, 10);
+    bar.add(bg);
+
+    const cy = 8 + barH / 2;
+    this.invSlots = {};
+
+    // Day label.
+    this.dayText = this.add
+      .text(26, cy, 'Day 1', {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '18px',
+        color: '#f6d785',
+        fontStyle: 'bold'
+      })
+      .setOrigin(0, 0.5);
+    bar.add(this.dayText);
+
+    // Helper to add an icon slot with optional count text.
+    const addSlot = (id, x, key, withCount) => {
+      const icon = this.add.image(x, cy, key).setOrigin(0.5);
+      bar.add(icon);
+      let count = null;
+      if (withCount) {
+        count = this.add
+          .text(x + 14, cy + 6, '0', {
+            fontFamily: 'Trebuchet MS, sans-serif',
+            fontSize: '14px',
+            color: '#f4ecdf',
+            fontStyle: 'bold'
+          })
+          .setOrigin(0.5);
+        bar.add(count);
+      }
+      this.invSlots[id] = { icon, count, x };
+      return x;
+    };
+
+    let x = 110;
+    const gap = 56;
+    addSlot('neuroHoe', x, GEN_KEYS.iconHoe, false); x += gap;
+    addSlot('recallCan', x, GEN_KEYS.iconCan, false); x += gap;
+    addSlot('seedPouch', x, GEN_KEYS.iconPouch, true); x += gap;
+    addSlot('memoryBerry', x, GEN_KEYS.iconBerry, true); x += gap;
+    addSlot('archiveSatchel', x, GEN_KEYS.iconSatchel, false); x += gap + 6;
+
+    // Archive progress.
+    this.archiveText = this.add
+      .text(x + 6, cy, 'Archive 0/5', {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '16px',
+        color: '#f4ecdf'
+      })
+      .setOrigin(0, 0.5);
+    bar.add(this.archiveText);
+
+    this.inventoryBar = bar;
+  }
+
+  refreshInventory(state, flash = []) {
+    if (!this.invSlots) return;
+    const inv = state.inventory;
+    this.dayText.setText(`Day ${state.day}`);
+
+    const setOwned = (id, owned) => {
+      const s = this.invSlots[id];
+      if (!s) return;
+      s.icon.setAlpha(owned ? 1 : 0.28);
+    };
+    setOwned('neuroHoe', inv.hasNeuroHoe);
+    setOwned('recallCan', inv.hasRecallCan);
+    setOwned('seedPouch', inv.hasSeedPouch);
+    setOwned('archiveSatchel', inv.hasArchiveSatchel);
+
+    // Berry icon dims when none carried but stays "owned" once satchel exists.
+    this.invSlots.memoryBerry.icon.setAlpha(inv.memoryBerries > 0 ? 1 : 0.4);
+
+    if (this.invSlots.seedPouch.count) this.invSlots.seedPouch.count.setText(`${inv.memorySeeds}`);
+    if (this.invSlots.memoryBerry.count) this.invSlots.memoryBerry.count.setText(`${inv.memoryBerries}`);
+
+    this.archiveText.setText(`Archive ${state.archive.memoryBerriesArchived}/${state.archive.requiredMemoryBerries}`);
+
+    flash.forEach((id) => this.flashSlot(id));
+  }
+
+  // Pulse an inventory slot (and the archive label) when an action happens.
+  flashSlot(id) {
+    let target = this.invSlots[id] && this.invSlots[id].icon;
+    if (id === 'archive') target = this.archiveText;
+    if (!target) return;
+    this.tweens.add({
+      targets: target,
+      scale: 1.45,
+      duration: 130,
+      yoyo: true,
+      ease: 'Quad.easeOut'
+    });
+  }
+
+  // --- Field Notes panel (top-right) ---
+  buildFieldNotes() {
+    const { canvasWidth: w } = GAME_CONFIG;
+    const panelW = 250;
+    const x = w - panelW - 14;
+    const y = 64;
+
+    this.fieldNotesPanel = this.add.container(0, 0).setDepth(880);
+    this.fieldNotesBg = this.add.graphics();
+    this.fieldNotesTitle = this.add.text(x + 14, y + 10, 'Field Notes', {
+      fontFamily: 'Trebuchet MS, sans-serif',
+      fontSize: '16px',
+      color: '#f6d785',
+      fontStyle: 'bold'
+    });
+    this.fieldNotesBody = this.add.text(x + 14, y + 34, '', {
+      fontFamily: 'Trebuchet MS, sans-serif',
+      fontSize: '14px',
+      color: '#f4ecdf',
+      wordWrap: { width: panelW - 28 },
+      lineSpacing: 3
+    });
+    this.fieldNotesPanel.add([this.fieldNotesBg, this.fieldNotesTitle, this.fieldNotesBody]);
+    this._fnGeom = { x, y, panelW };
+  }
+
+  refreshFieldNotes(state) {
+    if (!this.fieldNotesTitle) return;
+    const note = FIELD_NOTES[state.fieldNotesStep] || FIELD_NOTES.talk_to_hebb;
+    const body = note.body.replace('{n}', state.archive.memoryBerriesArchived);
+    this.fieldNotesTitle.setText(note.title);
+    this.fieldNotesBody.setText(body);
+
+    const { x, y, panelW } = this._fnGeom;
+    const h = 34 + this.fieldNotesBody.height + 16;
+    this.fieldNotesBg.clear();
+    this.fieldNotesBg.fillStyle(PALETTE.uiPanel, 0.9);
+    this.fieldNotesBg.fillRoundedRect(x, y, panelW, h, 10);
+    this.fieldNotesBg.lineStyle(2, PALETTE.uiPanelEdge, 1);
+    this.fieldNotesBg.strokeRoundedRect(x, y, panelW, h, 10);
   }
 
   // --- dialogue box (bottom, multi-line, advanced with E/Space) ---

@@ -8,7 +8,14 @@ export const GEN_KEYS = {
   playerUp: 'player_up',
   playerSide: 'player_side',
   hebbDown: 'hebb_down',
-  archiveGlow: 'building_memory_archive_glow'
+  archiveGlow: 'building_memory_archive_glow',
+  // inventory/item icons (24x24)
+  iconHoe: 'icon_neurohoe',
+  iconCan: 'icon_recallcan',
+  iconPouch: 'icon_seedpouch',
+  iconSatchel: 'icon_archivesatchel',
+  iconSeed: 'icon_memoryseed',
+  iconBerry: 'icon_memoryberry'
 };
 
 const T = GAME_CONFIG.tileSize; // 32
@@ -370,6 +377,70 @@ function buildFxUi(scene) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// ITEM / TOOL ICONS (24x24)
+// ---------------------------------------------------------------------------
+function buildIcons(scene) {
+  const S = 24;
+  make(scene, GEN_KEYS.iconHoe, S, S, (g) => {
+    g.lineStyle(3, 0x9b7142, 1);
+    g.beginPath();
+    g.moveTo(5, 19); g.lineTo(16, 6);
+    g.strokePath();
+    g.fillStyle(0xc0c4cc, 1);
+    g.fillRect(14, 4, 7, 4);
+    g.fillStyle(PALETTE.glow, 1);
+    g.fillCircle(6, 19, 2);
+  });
+
+  make(scene, GEN_KEYS.iconCan, S, S, (g) => {
+    g.fillStyle(0x6f8fb8, 1);
+    g.fillRoundedRect(6, 9, 11, 11, 3); // body
+    g.fillRect(15, 6, 6, 3); // spout
+    g.fillStyle(0x9bb6d8, 1);
+    g.fillRect(8, 6, 5, 3); // top
+    g.fillStyle(0x6fa6d8, 1);
+    g.fillCircle(20, 12, 1.5);
+    g.fillCircle(21, 15, 1.5);
+  });
+
+  make(scene, GEN_KEYS.iconPouch, S, S, (g) => {
+    g.fillStyle(0x8a6f4a, 1);
+    g.fillRoundedRect(6, 9, 12, 12, 5);
+    g.fillStyle(0x6b5236, 1);
+    g.fillRect(9, 6, 6, 4); // neck
+    g.fillStyle(PALETTE.glow, 0.9);
+    g.fillCircle(12, 15, 2);
+  });
+
+  make(scene, GEN_KEYS.iconSatchel, S, S, (g) => {
+    g.fillStyle(0x7a5a8a, 1);
+    g.fillRoundedRect(5, 9, 14, 11, 3);
+    g.fillStyle(0x5f4470, 1);
+    g.fillRect(5, 9, 14, 5); // flap
+    g.fillStyle(PALETTE.glow, 1);
+    g.fillRect(11, 12, 2, 4); // clasp
+  });
+
+  make(scene, GEN_KEYS.iconSeed, S, S, (g) => {
+    g.fillStyle(PALETTE.cropSeed, 1);
+    g.fillEllipse(12, 13, 8, 11);
+    g.fillStyle(PALETTE.sparkle, 0.9);
+    g.fillCircle(10, 10, 1.5);
+  });
+
+  make(scene, GEN_KEYS.iconBerry, S, S, (g) => {
+    g.fillStyle(PALETTE.glow, 0.35);
+    g.fillCircle(12, 12, 9);
+    g.fillStyle(PALETTE.cropReady, 1);
+    g.fillCircle(9, 13, 4);
+    g.fillCircle(15, 13, 4);
+    g.fillCircle(12, 8, 4);
+    g.fillStyle(PALETTE.sparkle, 0.9);
+    g.fillCircle(9, 7, 1);
+  });
+}
+
 // Generate every placeholder texture that did not arrive as a real asset.
 export function generatePlaceholderTextures(scene) {
   buildTiles(scene);
@@ -377,4 +448,5 @@ export function generatePlaceholderTextures(scene) {
   buildCrops(scene);
   buildBuildings(scene);
   buildFxUi(scene);
+  buildIcons(scene);
 }
