@@ -69,6 +69,14 @@ export const HEBB_STAGES = {
       'A few more should strengthen the pathway.'
     ]
   },
+  dream_intro: {
+    id: 'dream_intro',
+    lines: [
+      'You found the grove. Good. It grows Dream Blooms — memories that only settle after proper rest.',
+      'Take these Dream Seeds. Plant them in the grove soil, water them, and sleep. They are slow: three nights of rest, minimum. Like a good idea.',
+      'When they bloom, bring them to the Dream Altar. It has been waiting. Dramatically.'
+    ]
+  },
   fog_cleared: {
     id: 'fog_cleared',
     lines: ['Synapse Grove is just ahead. Excellent news, unless the synapses have unionized again.']
@@ -84,6 +92,10 @@ export function selectHebbStage(state) {
   if (!state.tutorial.metDrHebb) return HEBB_STAGES.intro;
 
   if (state.archive.fogCleared) {
+    // Once the player has reached the grove, Dr. Hebb hands over Dream Seeds.
+    if (state.tutorial.reachedTeaserPath && !state.tutorial.receivedDreamSeeds) {
+      return HEBB_STAGES.dream_intro;
+    }
     // Alternate the two post-fog repeat lines.
     return state.tutorial.hebbPostFogLine % 2 === 0
       ? HEBB_STAGES.fog_cleared
@@ -153,7 +165,19 @@ export const FIELD_NOTES = {
   },
   explore_grove: {
     title: 'Field Notes',
-    body: 'Synapse Grove is open to the north.\n\nDr. Hebb mentioned Dream Blooms grow there.'
+    body: 'Synapse Grove is open to the north.\n\nTalk to Dr. Hebb for Dream Seeds.'
+  },
+  grow_dreams: {
+    title: 'Field Notes',
+    body: 'Grow Dream Blooms in the grove.\n\nHint:\nWater them, then sleep. They need 3 nights of rest.'
+  },
+  harvest_dreams: {
+    title: 'Field Notes',
+    body: 'Harvest the glowing Dream Blooms in the grove.'
+  },
+  offer_dreams: {
+    title: 'Field Notes',
+    body: 'Bring Dream Blooms to the Dream Altar.\n\nOffered: {d}/3'
   },
   complete: {
     title: 'Field Notes',

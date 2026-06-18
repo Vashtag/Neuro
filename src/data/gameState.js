@@ -19,6 +19,11 @@ export function createDefaultGameState() {
       requiredMemoryBerries: 5,
       fogCleared: false
     },
+    grove: {
+      dreamBloomsOffered: 0,
+      requiredDreamBlooms: 3,
+      restored: false
+    },
     tutorial: {
       metDrHebb: false,
       receivedTools: false,
@@ -28,7 +33,11 @@ export function createDefaultGameState() {
       harvestedFirstBerry: false,
       depositedFirstBerry: false,
       reachedTeaserPath: false,
-      hebbPostFogLine: 0
+      hebbPostFogLine: 0,
+      // Stage 2
+      receivedDreamSeeds: false,
+      offeredFirstDream: false,
+      groveRestored: false
     },
     fieldNotesStep: 'talk_to_hebb',
     // Each entry: { x, y, soilState, wateredToday, crop }
@@ -57,6 +66,14 @@ export function hasReadyCrop(state) {
   return state.crops.some((c) => c.crop && c.crop.ready);
 }
 
+export function hasReadyCropOfType(state, cropType) {
+  return state.crops.some((c) => c.crop && c.crop.ready && c.cropType === cropType);
+}
+
 export function carryingBerries(state) {
   return state.inventory.memoryBerries > 0;
+}
+
+export function carryingDreamBlooms(state) {
+  return state.inventory.dreamBlooms > 0;
 }

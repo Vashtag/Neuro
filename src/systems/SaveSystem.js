@@ -55,6 +55,7 @@ function sanitize(loaded) {
   const out = { ...def, ...loaded };
   out.inventory = { ...def.inventory, ...(loaded.inventory || {}) };
   out.archive = { ...def.archive, ...(loaded.archive || {}) };
+  out.grove = { ...def.grove, ...(loaded.grove || {}) };
   out.tutorial = { ...def.tutorial, ...(loaded.tutorial || {}) };
   out.player = { ...def.player, ...(loaded.player || {}) };
   out.crops = Array.isArray(loaded.crops) ? loaded.crops : def.crops;

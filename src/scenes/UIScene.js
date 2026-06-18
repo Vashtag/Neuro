@@ -61,18 +61,18 @@ export default class UIScene extends Phaser.Scene {
       bar.add(frame);
       bar.add(icon);
       let count = null;
+      let chip = null;
       if (withCount) {
-        count = this.add
-          .text(x + 13, cy + 9, '0', { fontFamily: FONT, fontSize: '13px', color: CREAM, fontStyle: 'bold' })
-          .setOrigin(0.5);
-        // Small dark chip behind the count for legibility on the parchment slot.
-        const chip = this.add.graphics();
+        chip = this.add.graphics();
         chip.fillStyle(0x2a2140, 0.85);
         chip.fillCircle(x + 13, cy + 9, 9);
         bar.add(chip);
+        count = this.add
+          .text(x + 13, cy + 9, '0', { fontFamily: FONT, fontSize: '13px', color: CREAM, fontStyle: 'bold' })
+          .setOrigin(0.5);
         bar.add(count);
       }
-      this.invSlots[id] = { frame, icon, count, x };
+      this.invSlots[id] = { frame, icon, count, chip, x };
     };
 
     let x = 116;
@@ -81,7 +81,12 @@ export default class UIScene extends Phaser.Scene {
     addSlot('recallCan', x, GEN_KEYS.iconCan, false); x += gap;
     addSlot('seedPouch', x, GEN_KEYS.iconPouch, true); x += gap;
     addSlot('memoryBerry', x, GEN_KEYS.iconBerry, true); x += gap;
-    addSlot('archiveSatchel', x, GEN_KEYS.iconSatchel, false); x += gap + 8;
+    addSlot('archiveSatchel', x, GEN_KEYS.iconSatchel, false); x += gap;
+    // Dream items (Stage 2) — hidden until unlocked.
+    addSlot('dreamSeed', x, GEN_KEYS.iconDreamSeed, true); x += gap;
+    addSlot('dreamBloom', x, GEN_KEYS.iconDreamBloom, true); x += gap + 8;
+    this.setSlotVisible('dreamSeed', false);
+    this.setSlotVisible('dreamBloom', false);
 
     this.archiveText = this.add
       .text(x, cy, 'Archive 0/5', { fontFamily: FONT, fontSize: '16px', color: CREAM })
@@ -89,6 +94,15 @@ export default class UIScene extends Phaser.Scene {
     bar.add(this.archiveText);
 
     this.inventoryBar = bar;
+  }
+
+  setSlotVisible(id, vis) {
+    const s = this.invSlots && this.invSlots[id];
+    if (!s) return;
+    s.frame.setVisible(vis);
+    s.icon.setVisible(vis);
+    if (s.count) s.count.setVisible(vis);
+    if (s.chip) s.chip.setVisible(vis);
   }
 
   refreshInventory(state, flash = []) {
@@ -111,6 +125,17 @@ export default class UIScene extends Phaser.Scene {
 
     if (this.invSlots.seedPouch.count) this.invSlots.seedPouch.count.setText(`${inv.memorySeeds}`);
     if (this.invSlots.memoryBerry.count) this.invSlots.memoryBerry.count.setText(`${inv.memoryBerries}`);
+
+    // Dream items appear once unlocked (Stage 2).
+    const dreamUnlocked = state.tutorial.receivedDreamSeeds || inv.dreamSeeds > 0 || inv.dreamBlooms > 0;
+    this.setSlotVisible('dreamSeed', dreamUnlocked);
+    this.setSlotVisible('dreamBloom', dreamUnlocked);
+    if (dreamUnlocked) {
+      this.invSlots.dreamSeed.count.setText(`${inv.dreamSeeds}`);
+      this.invSlots.dreamSeed.icon.setAlpha(inv.dreamSeeds > 0 ? 1 : 0.4);
+      this.invSlots.dreamBloom.count.setText(`${inv.dreamBlooms}`);
+      this.invSlots.dreamBloom.icon.setAlpha(inv.dreamBlooms > 0 ? 1 : 0.4);
+    }
 
     this.archiveText.setText(
       `Archive ${state.archive.memoryBerriesArchived}/${state.archive.requiredMemoryBerries}`
@@ -174,7 +199,9 @@ export default class UIScene extends Phaser.Scene {
   refreshFieldNotes(state) {
     if (!this.fieldNotesTitle) return;
     const note = FIELD_NOTES[state.fieldNotesStep] || FIELD_NOTES.talk_to_hebb;
-    const body = note.body.replace('{n}', state.archive.memoryBerriesArchived);
+    const body = note.body
+      .replace('{n}', state.archive.memoryBerriesArchived)
+      .replace('{d}', state.grove ? state.grove.dreamBloomsOffered : 0);
     this.fieldNotesTitle.setText(note.title);
     this.fieldNotesBody.setText(body);
   }

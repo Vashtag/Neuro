@@ -5,7 +5,13 @@ import Player from '../objects/Player.js';
 import NPC from '../objects/NPC.js';
 import InteractionSystem from '../systems/InteractionSystem.js';
 import { PLAYER_START_TILE, INTERACTABLES } from '../data/mapData.js';
-import { createDefaultGameState, carryingBerries, hasReadyCrop } from '../data/gameState.js';
+import {
+  createDefaultGameState,
+  carryingBerries,
+  hasReadyCrop,
+  carryingDreamBlooms,
+  hasReadyCropOfType
+} from '../data/gameState.js';
 import { selectHebbStage } from '../data/dialogueData.js';
 import FarmingSystem from '../systems/FarmingSystem.js';
 import DaySystem from '../systems/DaySystem.js';
@@ -186,12 +192,22 @@ export default class GameScene extends Phaser.Scene {
     const s = this.state;
     let step;
     if (!s.tutorial.metDrHebb) step = 'talk_to_hebb';
-    else if (s.archive.fogCleared) step = s.tutorial.reachedTeaserPath ? 'explore_grove' : 'explore_path';
+    else if (s.archive.fogCleared) step = this.deriveGroveStep(s);
     else if (carryingBerries(s)) step = 'archive_berries';
     else if (hasReadyCrop(s)) step = 'harvest_berries';
     else step = 'grow_berries';
     s.fieldNotesStep = step;
     this.ui.refreshFieldNotes?.(s);
+  }
+
+  // Stage 2 objective progression (post-fog).
+  deriveGroveStep(s) {
+    if (!s.tutorial.reachedTeaserPath) return 'explore_path';
+    if (!s.tutorial.receivedDreamSeeds) return 'explore_grove';
+    if (s.grove.restored) return 'complete';
+    if (carryingDreamBlooms(s)) return 'offer_dreams';
+    if (hasReadyCropOfType(s, 'dream_bloom')) return 'harvest_dreams';
+    return 'grow_dreams';
   }
 
   // Placeholder Dream Altar interaction (made functional in S2.4).
@@ -214,9 +230,21 @@ export default class GameScene extends Phaser.Scene {
     if (stage.id === 'intro' && !this.state.tutorial.receivedTools) {
       this.grantStarterKit();
     }
+    if (stage.id === 'dream_intro' && !this.state.tutorial.receivedDreamSeeds) {
+      this.grantDreamSeeds();
+    }
     if (stage.id === 'fog_cleared' || stage.id === 'fog_cleared_2') {
       this.state.tutorial.hebbPostFogLine += 1;
     }
+  }
+
+  // Stage 2: Dr. Hebb hands over Dream Seeds after the grove opens.
+  grantDreamSeeds() {
+    this.state.inventory.dreamSeeds = 5;
+    this.state.tutorial.receivedDreamSeeds = true;
+    this.updateFieldNotes();
+    this.syncUI(['dreamSeed']);
+    this.ui.showMessage('Received: 5 Dream Seeds. Plant them in the grove soil.', 3200);
   }
 
   // Reward after the intro: tools + 5 Memory Seeds, advance objective.
