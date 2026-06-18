@@ -10,7 +10,9 @@ export function createDefaultGameState() {
       hasSeedPouch: false,
       hasArchiveSatchel: false,
       memorySeeds: 0,
-      memoryBerries: 0
+      memoryBerries: 0,
+      dreamSeeds: 0,
+      dreamBlooms: 0
     },
     archive: {
       memoryBerriesArchived: 0,
