@@ -18,7 +18,7 @@ import DaySystem from '../systems/DaySystem.js';
 import ArchiveSystem from '../systems/ArchiveSystem.js';
 import SoundManager from '../systems/SoundManager.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
-import { ACTION_MESSAGES, COMPLETION_TEXT } from '../data/dialogueData.js';
+import { ACTION_MESSAGES, GROVE_COMPLETION_TEXT, DREAM_MESSAGES } from '../data/dialogueData.js';
 import { TEXTURE_KEYS } from '../data/assetManifest.js';
 
 // GameScene: the world. Renders the Hippocampus Hollow map and (in later
@@ -70,6 +70,9 @@ export default class GameScene extends Phaser.Scene {
 
     // --- Archive ---
     this.archive = new ArchiveSystem(this);
+
+    // Restore the Dream Altar glow if loading mid Stage 2.
+    this.updateAltarVisual(true);
 
     // --- UI reference + interaction ---
     this.ui = this.scene.get(SCENES.UI);
@@ -210,10 +213,55 @@ export default class GameScene extends Phaser.Scene {
     return 'grow_dreams';
   }
 
-  // Placeholder Dream Altar interaction (made functional in S2.4).
+  // Offer carried Dream Blooms to the Dream Altar (Stage 2 goal).
   onDreamAltar() {
-    this.ui.showMessage('The Dream Altar is dormant. It is waiting for something grown from rest.');
-    this.sfx('unavailable');
+    const grove = this.state.grove;
+    const inv = this.state.inventory;
+    const carried = inv.dreamBlooms;
+
+    if (carried <= 0) {
+      this.ui.showMessage(DREAM_MESSAGES.waiting);
+      this.sfx('unavailable');
+      return;
+    }
+
+    inv.dreamBlooms = 0;
+    grove.dreamBloomsOffered = Math.min(grove.dreamBloomsOffered + carried, grove.requiredDreamBlooms);
+    this.state.tutorial.offeredFirstDream = true;
+
+    this.sfx('archive');
+    this.updateAltarVisual();
+    this.syncUI(['dreamBloom']);
+    this.updateFieldNotes();
+
+    const n = grove.dreamBloomsOffered;
+    this.ui.showMessage(`${DREAM_MESSAGES.offer(carried)} (${n}/${grove.requiredDreamBlooms})`, 2600);
+
+    if (n >= grove.requiredDreamBlooms && !grove.restored) {
+      grove.restored = true;
+      this.time.delayedCall(900, () => this.handleGroveComplete());
+    }
+  }
+
+  // Glow overlay alpha scales with offered progress.
+  updateAltarVisual(instant = false) {
+    const glow = this.map.dreamAltarGlowSprite;
+    if (!glow) return;
+    const grove = this.state.grove;
+    const ratio = grove.dreamBloomsOffered / grove.requiredDreamBlooms;
+    if (instant) glow.setAlpha(ratio);
+    else this.tweens.add({ targets: glow, alpha: ratio, duration: 700, ease: 'Sine.easeInOut' });
+  }
+
+  // Stage 2 finale: the grove is restored.
+  handleGroveComplete() {
+    this.sfx('fogClear');
+    this.updateFieldNotes(); // -> complete
+    this.ui.showMessage(DREAM_MESSAGES.restored, 2600);
+    this.player.setInputLocked(true);
+    this.time.delayedCall(1200, () => {
+      this.ui.showCompletion(GROVE_COMPLETION_TEXT.title, GROVE_COMPLETION_TEXT.body);
+    });
   }
 
   // --- Dr. Hebb dialogue ---

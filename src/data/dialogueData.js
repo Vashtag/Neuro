@@ -84,12 +84,21 @@ export const HEBB_STAGES = {
   fog_cleared_2: {
     id: 'fog_cleared_2',
     lines: ['Go on, take a look. Try not to step on anything electrically important.']
+  },
+  grove_done: {
+    id: 'grove_done',
+    lines: [
+      'The Dream Altar is glowing. Synapse Grove can rest properly now. So can I.',
+      'There is a path humming further north. Another time, though. Even neurons need a weekend.'
+    ]
   }
 };
 
 // Choose Dr. Hebb's current stage from game state, following the dialogue ref.
 export function selectHebbStage(state) {
   if (!state.tutorial.metDrHebb) return HEBB_STAGES.intro;
+
+  if (state.grove && state.grove.restored) return HEBB_STAGES.grove_done;
 
   if (state.archive.fogCleared) {
     // Once the player has reached the grove, Dr. Hebb hands over Dream Seeds.
@@ -181,7 +190,7 @@ export const FIELD_NOTES = {
   },
   complete: {
     title: 'Field Notes',
-    body: 'Pathway restored.\n\nSynapse Grove is now reachable.\nFurther regions coming soon.'
+    body: 'Synapse Grove restored.\n\nThe Dream Altar glows and a path hums further north.\nMore regions coming soon.'
   }
 };
 
@@ -189,4 +198,17 @@ export const FIELD_NOTES = {
 export const COMPLETION_TEXT = {
   title: 'Pathway Restored',
   body: 'The route to Synapse Grove is open.\nMore memories are waiting to grow.\n\nEnd of current build. Synapse Grove coming soon.'
+};
+
+// Stage 2 finale: Dream Altar restored.
+export const GROVE_COMPLETION_TEXT = {
+  title: 'Synapse Grove Restored',
+  body: 'The Dream Altar shines. Memories rest easy here now.\n\nEnd of current build. The path north waits for another day.'
+};
+
+// Dream Altar action messages.
+export const DREAM_MESSAGES = {
+  waiting: 'The Dream Altar is dormant. Bring it Dream Blooms grown from rest.',
+  offer: (n) => `Offered ${n} Dream ${n === 1 ? 'Bloom' : 'Blooms'} to the Altar.`,
+  restored: 'The Dream Altar awakens. Synapse Grove settles into rest.'
 };
