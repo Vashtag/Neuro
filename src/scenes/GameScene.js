@@ -8,6 +8,8 @@ import { PLAYER_START_TILE, INTERACTABLES } from '../data/mapData.js';
 import { createDefaultGameState, carryingBerries, hasReadyCrop } from '../data/gameState.js';
 import { selectHebbStage } from '../data/dialogueData.js';
 import FarmingSystem from '../systems/FarmingSystem.js';
+import DaySystem from '../systems/DaySystem.js';
+import { SaveSystem } from '../systems/SaveSystem.js';
 
 // GameScene: the world. Renders the Hippocampus Hollow map and (in later
 // milestones) hosts the player, farming, interactions, archive and day systems.
@@ -23,8 +25,8 @@ export default class GameScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
 
-    // --- Central game state ---
-    this.state = createDefaultGameState();
+    // --- Central game state (load save if present) ---
+    this.state = SaveSystem.load();
 
     // --- Map ---
     this.map = new MapManager(this).create();
@@ -57,6 +59,14 @@ export default class GameScene extends Phaser.Scene {
       this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E),
       this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
     ];
+    this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.resetKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+
+    // --- Day / sleep system ---
+    this.daySystem = new DaySystem(this);
+
+    // Reflect any loaded progress in the Field Notes objective.
+    this.updateFieldNotes();
 
     // Debug probe for the headless smoke test (and console inspection).
     this.updateProbe();
@@ -82,7 +92,7 @@ export default class GameScene extends Phaser.Scene {
     return {
       onNpc: () => this.talkToHebb(),
       onArchive: () => msg('The Archive hums softly. It is waiting for retrieved memories.'),
-      onSleep: () => msg('A cozy door. (sleep system arrives in M8)'),
+      onSleep: () => this.daySystem.promptSleep(),
       onSign: (zone) => msg(zone.message || 'A weathered sign.', 3200),
       onFarm: (tile) => this.farming.doAction(tile),
       onUnavailable: () => msg('Nothing to do here right now.')
@@ -148,6 +158,28 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update() {
+    // Dev-only: reset the save and reload for a guaranteed-clean state.
+    if (Phaser.Input.Keyboard.JustDown(this.resetKey)) {
+      SaveSystem.reset();
+      window.location.reload();
+      return;
+    }
+
+    // While a confirm modal is open, E/Space/Enter = yes, Esc = no.
+    if (this.ui.isConfirmActive()) {
+      if (
+        Phaser.Input.Keyboard.JustDown(this.interactKeys[0]) ||
+        Phaser.Input.Keyboard.JustDown(this.interactKeys[1])
+      ) {
+        this.ui.resolveConfirm(true);
+      } else if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
+        this.ui.resolveConfirm(false);
+      }
+      this.interaction.setPromptVisible(false);
+      this.updateProbe(this.probeSnapshot());
+      return;
+    }
+
     // While a dialogue is open, E/Space only advances it.
     if (this.ui.isDialogueActive()) {
       if (

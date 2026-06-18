@@ -17,6 +17,7 @@ export default class UIScene extends Phaser.Scene {
     this.buildFieldNotes();
     this.buildToast();
     this.buildDialogue();
+    this.buildConfirm();
 
     // Populate from the (already created) GameScene state.
     const gs = this.scene.get(SCENES.GAME);
@@ -223,6 +224,69 @@ export default class UIScene extends Phaser.Scene {
     this.dialogueSpeaker = speaker;
     this.dialogueBody = body;
     this.dialogueBox.add([bg, speaker, body, hint]);
+  }
+
+  // --- yes/no confirm modal (e.g. sleep prompt) ---
+  buildConfirm() {
+    const { canvasWidth: w, canvasHeight: h } = GAME_CONFIG;
+    this.confirm = { active: false, onYes: null, onNo: null };
+
+    this.confirmBox = this.add.container(0, 0).setDepth(1300).setVisible(false);
+    const bw = 440;
+    const bh = 120;
+    const x = (w - bw) / 2;
+    const y = (h - bh) / 2;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(PALETTE.uiPanel, 0.97);
+    bg.fillRoundedRect(x, y, bw, bh, 12);
+    bg.lineStyle(3, PALETTE.uiPanelEdge, 1);
+    bg.strokeRoundedRect(x, y, bw, bh, 12);
+
+    this.confirmText = this.add
+      .text(x + bw / 2, y + 36, '', {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '18px',
+        color: '#f4ecdf',
+        align: 'center',
+        wordWrap: { width: bw - 40 }
+      })
+      .setOrigin(0.5);
+
+    this.confirmOptions = this.add
+      .text(x + bw / 2, y + bh - 26, '', {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '16px',
+        color: '#f6d785'
+      })
+      .setOrigin(0.5);
+
+    this.confirmBox.add([bg, this.confirmText, this.confirmOptions]);
+  }
+
+  isConfirmActive() {
+    return this.confirm && this.confirm.active;
+  }
+
+  showConfirm(message, yesLabel, noLabel, onYes, onNo) {
+    this.confirm.active = true;
+    this.confirm.onYes = onYes || null;
+    this.confirm.onNo = onNo || null;
+    this.confirmText.setText(message);
+    this.confirmOptions.setText(`[E] ${yesLabel}      [Esc] ${noLabel}`);
+    this.confirmBox.setVisible(true).setAlpha(0);
+    this.tweens.add({ targets: this.confirmBox, alpha: 1, duration: 140 });
+  }
+
+  resolveConfirm(yes) {
+    if (!this.confirm.active) return false;
+    this.confirm.active = false;
+    this.confirmBox.setVisible(false);
+    const cb = yes ? this.confirm.onYes : this.confirm.onNo;
+    this.confirm.onYes = null;
+    this.confirm.onNo = null;
+    if (cb) cb();
+    return true;
   }
 
   isDialogueActive() {
