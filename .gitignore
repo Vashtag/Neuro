@@ -3,3 +3,8 @@ dist/
 .DS_Store
 *.log
 .vite/
+
+# Local headless test harness (not part of the game/CI)
+smoke.mjs
+shot.mjs
+smoke_check.mjs

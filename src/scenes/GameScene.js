@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
 import { SCENES, GAME_CONFIG, PALETTE } from '../config.js';
+import MapManager from '../systems/MapManager.js';
 
-// GameScene: the world. In M1 it just proves the pipeline works by drawing a
-// placeholder background and a label. Map, player, farming, etc. arrive in
-// later milestones.
+// GameScene: the world. Renders the Hippocampus Hollow map and (in later
+// milestones) hosts the player, farming, interactions, archive and day systems.
 export default class GameScene extends Phaser.Scene {
   constructor() {
     super(SCENES.GAME);
@@ -12,17 +12,25 @@ export default class GameScene extends Phaser.Scene {
   create() {
     const { worldWidth, worldHeight } = GAME_CONFIG;
 
-    this.cameras.main.setBackgroundColor(PALETTE.neuralGround);
+    this.cameras.main.setBackgroundColor(PALETTE.border);
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
 
-    this.add
-      .text(worldWidth / 2, worldHeight / 2, 'Hippocampus Hollow\n(scaffold ready)', {
-        fontFamily: 'Trebuchet MS, sans-serif',
-        fontSize: '24px',
-        color: '#f4ecdf',
-        align: 'center'
-      })
-      .setOrigin(0.5);
+    // --- Map ---
+    this.map = new MapManager(this).create();
+
+    // Debug probe for the headless smoke test (and console inspection).
+    this.updateProbe();
+  }
+
+  updateProbe(extra = {}) {
+    window.__NEURO_PROBE__ = {
+      scene: 'game',
+      mapRows: this.map ? this.map.grid.length : 0,
+      mapCols: this.map ? this.map.grid[0].length : 0,
+      ...this.probeExtra,
+      ...extra
+    };
+    this.probeExtra = { ...this.probeExtra, ...extra };
   }
 }

@@ -40,15 +40,21 @@ export const TEXTURE_KEYS = {
   orb: 'fx_orb'
 };
 
-// Optional real-art overrides. PreloadScene attempts these; missing files are
-// silently ignored and the generated placeholder is used instead.
+// Optional real-art overrides. These are intentionally EMPTY by default so the
+// MVP runs with zero 404s / console errors using only generated placeholders.
+//
+// To use real pixel-art later, drop the PNG into public/assets/... and add an
+// entry here, e.g.:
+//   { key: TEXTURE_KEYS.player, url: 'assets/sprites/player.png' }
+// PreloadScene will load it and the matching placeholder is skipped — no game
+// logic changes required.
 export const ASSET_FILES = {
   images: [
-    { key: TEXTURE_KEYS.player, url: 'assets/sprites/player.png' },
-    { key: TEXTURE_KEYS.drHebb, url: 'assets/sprites/dr_hebb.png' },
-    { key: TEXTURE_KEYS.somaCottage, url: 'assets/buildings/soma_cottage.png' },
-    { key: TEXTURE_KEYS.memoryArchive, url: 'assets/buildings/memory_archive.png' },
-    { key: TEXTURE_KEYS.hebbHut, url: 'assets/buildings/hebb_hut.png' }
+    // { key: TEXTURE_KEYS.player, url: 'assets/sprites/player.png' },
+    // { key: TEXTURE_KEYS.drHebb, url: 'assets/sprites/dr_hebb.png' },
+    // { key: TEXTURE_KEYS.somaCottage, url: 'assets/buildings/soma_cottage.png' },
+    // { key: TEXTURE_KEYS.memoryArchive, url: 'assets/buildings/memory_archive.png' },
+    // { key: TEXTURE_KEYS.hebbHut, url: 'assets/buildings/hebb_hut.png' }
   ],
   // Audio is synthesized at runtime via the WebAudio SoundManager, so no files
   // are required. Real SFX can be added here later and the SoundManager can be

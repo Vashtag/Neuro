@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { SCENES, GAME_CONFIG, PALETTE } from '../config.js';
 import { ASSET_FILES } from '../data/assetManifest.js';
+import { generatePlaceholderTextures } from '../systems/TextureFactory.js';
 
 // PreloadScene: shows a tiny loading bar, attempts to load any real art that
 // exists, then generates programmatic placeholder textures for everything that
@@ -51,8 +52,10 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   create() {
-    // Placeholder textures are generated lazily here in M2 (TextureFactory).
-    // For M1 we simply launch the world + UI scenes.
+    // Generate every placeholder texture that did not arrive as a real asset.
+    // Keys that DID load (real PNGs) already exist and are skipped inside.
+    generatePlaceholderTextures(this);
+
     this.scene.start(SCENES.GAME);
     this.scene.launch(SCENES.UI);
   }
