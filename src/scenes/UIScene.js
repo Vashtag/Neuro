@@ -289,6 +289,82 @@ export default class UIScene extends Phaser.Scene {
     return true;
   }
 
+  // --- completion / end-of-build overlay ---
+  isCompletionActive() {
+    return this.completion && this.completion.active;
+  }
+
+  showCompletion(title, body) {
+    const { canvasWidth: w, canvasHeight: h } = GAME_CONFIG;
+    if (!this.completion) this.completion = { active: false };
+    if (this.completion.active) return;
+    this.completion.active = true;
+
+    const c = this.add.container(0, 0).setDepth(1500).setAlpha(0);
+
+    const dim = this.add.graphics();
+    dim.fillStyle(0x0c0a16, 0.6);
+    dim.fillRect(0, 0, w, h);
+
+    const bw = 560;
+    const bh = 240;
+    const x = (w - bw) / 2;
+    const y = (h - bh) / 2;
+    const bg = this.add.graphics();
+    bg.fillStyle(PALETTE.uiPanel, 0.98);
+    bg.fillRoundedRect(x, y, bw, bh, 16);
+    bg.lineStyle(3, PALETTE.archiveGlow, 1);
+    bg.strokeRoundedRect(x, y, bw, bh, 16);
+
+    const titleText = this.add
+      .text(w / 2, y + 44, title, {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '30px',
+        color: '#f6d785',
+        fontStyle: 'bold'
+      })
+      .setOrigin(0.5);
+
+    const bodyText = this.add
+      .text(w / 2, y + 120, body, {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '17px',
+        color: '#f4ecdf',
+        align: 'center',
+        lineSpacing: 6,
+        wordWrap: { width: bw - 60 }
+      })
+      .setOrigin(0.5);
+
+    const hint = this.add
+      .text(w / 2, y + bh - 22, 'Press E to continue', {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '14px',
+        color: '#9a86d8'
+      })
+      .setOrigin(0.5);
+    this.tweens.add({ targets: hint, alpha: 0.3, duration: 800, yoyo: true, repeat: -1 });
+
+    c.add([dim, bg, titleText, bodyText, hint]);
+    this.completionBox = c;
+    this.tweens.add({ targets: c, alpha: 1, duration: 400 });
+  }
+
+  dismissCompletion() {
+    if (!this.completion || !this.completion.active) return false;
+    this.completion.active = false;
+    if (this.completionBox) {
+      const box = this.completionBox;
+      this.tweens.add({
+        targets: box,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => box.destroy()
+      });
+    }
+    return true;
+  }
+
   isDialogueActive() {
     return this.dialogue && this.dialogue.active;
   }

@@ -11,7 +11,8 @@ import FarmingSystem from '../systems/FarmingSystem.js';
 import DaySystem from '../systems/DaySystem.js';
 import ArchiveSystem from '../systems/ArchiveSystem.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
-import { ACTION_MESSAGES } from '../data/dialogueData.js';
+import { ACTION_MESSAGES, COMPLETION_TEXT } from '../data/dialogueData.js';
+import { TEXTURE_KEYS } from '../data/assetManifest.js';
 
 // GameScene: the world. Renders the Hippocampus Hollow map and (in later
 // milestones) hosts the player, farming, interactions, archive and day systems.
@@ -37,6 +38,9 @@ export default class GameScene extends Phaser.Scene {
     const start = this.map.tileToWorldCenter(PLAYER_START_TILE.x, PLAYER_START_TILE.y);
     this.player = new Player(this, start.x, start.y);
     this.physics.add.collider(this.player, this.map.colliders);
+
+    // --- Synapse Grove teaser decorations ---
+    this.createTeaserDecorations();
 
     // --- Dr. Hebb NPC ---
     const hebbZone = INTERACTABLES.find((z) => z.id === 'dr_hebb');
@@ -110,8 +114,48 @@ export default class GameScene extends Phaser.Scene {
     };
   }
 
+  // Small non-blocking decorations for the Synapse Grove teaser interactables.
+  createTeaserDecorations() {
+    const T = GAME_CONFIG.tileSize;
+    const place = (id, draw) => {
+      const z = INTERACTABLES.find((i) => i.id === id);
+      if (z) draw(z.x * T + T / 2, z.y * T + T / 2);
+    };
+
+    place('synapse_signpost', (x, y) => {
+      this.add.image(x, y, TEXTURE_KEYS.signpost).setDepth(y + 16);
+    });
+
+    place('synapse_firefly', (x, y) => {
+      const orb = this.add.image(x, y, TEXTURE_KEYS.orb).setDepth(y + 16);
+      this.tweens.add({ targets: orb, y: y - 6, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: orb, alpha: 0.5, duration: 700, yoyo: true, repeat: -1 });
+    });
+
+    place('axon_bridge', (x, y) => {
+      const g = this.add.graphics().setDepth(y + 16);
+      g.fillStyle(PALETTE.path, 1);
+      g.fillRoundedRect(x - 12, y - 5, 24, 10, 3);
+      g.lineStyle(2, PALETTE.sparkle, 0.8);
+      g.strokeRoundedRect(x - 12, y - 5, 24, 10, 3);
+    });
+  }
+
   // Placeholder SFX hook; replaced by the WebAudio SoundManager in M11.
   sfx() {}
+
+  // Fires once when the player first steps onto the restored teaser path.
+  checkTeaserReached() {
+    if (!this.state.archive.fogCleared || this.state.tutorial.reachedTeaserPath) return;
+    const tile = this.map.worldToTile(this.player.x, this.player.y);
+    if (tile.y <= 2) {
+      this.state.tutorial.reachedTeaserPath = true;
+      this.updateFieldNotes(); // -> complete
+      this.sfx('fogClear');
+      this.player.setInputLocked(true);
+      this.ui.showCompletion(COMPLETION_TEXT.title, COMPLETION_TEXT.body);
+    }
+  }
 
   // Reaching 5/5 archived: clear the Forgetting Fog. The teaser path + end-of-
   // build completion are layered on in M10.
@@ -189,6 +233,19 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    // The completion overlay captures E to dismiss and then unlocks the player.
+    if (this.ui.isCompletionActive()) {
+      if (
+        Phaser.Input.Keyboard.JustDown(this.interactKeys[0]) ||
+        Phaser.Input.Keyboard.JustDown(this.interactKeys[1])
+      ) {
+        this.ui.dismissCompletion();
+        this.player.setInputLocked(false);
+      }
+      this.updateProbe(this.probeSnapshot());
+      return;
+    }
+
     // While a confirm modal is open, E/Space/Enter = yes, Esc = no.
     if (this.ui.isConfirmActive()) {
       if (
@@ -218,6 +275,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.interaction.update();
+    this.checkTeaserReached();
 
     if (
       Phaser.Input.Keyboard.JustDown(this.interactKeys[0]) ||
