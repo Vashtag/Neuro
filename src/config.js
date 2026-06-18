@@ -4,7 +4,7 @@
 export const GAME_CONFIG = {
   tileSize: 32,
   mapWidthTiles: 40,
-  mapHeightTiles: 30,
+  mapHeightTiles: 40,
   get worldWidth() {
     return this.mapWidthTiles * this.tileSize;
   },
@@ -55,5 +55,16 @@ export const PALETTE = {
   uiPanelEdge: 0x6f5da8,
   uiText: 0xf4ecdf,
   glow: 0xf6d785,
-  sparkle: 0xfff4c4
+  sparkle: 0xfff4c4,
+  // Synapse Grove region
+  grove: 0x35455f,
+  groveAlt: 0x3f5070,
+  dreamPool: 0x4a4a8c,
+  dreamPoolDeep: 0x35356f,
+  tree: 0x336b54,
+  treeGlow: 0x8fe0c0,
+  altarDim: 0x55477f,
+  altarGlow: 0xc6aef6,
+  dreamCrop: 0x9a86d8,
+  dreamCropReady: 0xc7b6f2
 };

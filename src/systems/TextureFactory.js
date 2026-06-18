@@ -15,7 +15,11 @@ export const GEN_KEYS = {
   iconPouch: 'icon_seedpouch',
   iconSatchel: 'icon_archivesatchel',
   iconSeed: 'icon_memoryseed',
-  iconBerry: 'icon_memoryberry'
+  iconBerry: 'icon_memoryberry',
+  // Synapse Grove (Stage 2)
+  iconDreamSeed: 'icon_dreamseed',
+  iconDreamBloom: 'icon_dreambloom',
+  dreamAltarGlow: 'building_dream_altar_glow'
 };
 
 const T = GAME_CONFIG.tileSize; // 32
@@ -124,6 +128,39 @@ function buildTiles(scene) {
     g.fillRect(0, 0, T, T);
     scatter(g, PALETTE.sparkle, 4, T, T, 2, 41);
     scatter(g, 0x9a86d8, 8, T, T, 2, 17);
+  });
+
+  // --- Synapse Grove tiles ---
+  make(scene, TEXTURE_KEYS.groveGround, T, T, (g) => {
+    g.fillStyle(PALETTE.grove, 1);
+    g.fillRect(0, 0, T, T);
+    scatter(g, PALETTE.groveAlt, 10, T, T, 2, 9);
+    scatter(g, PALETTE.treeGlow, 2, T, T, 1, 29);
+  });
+
+  make(scene, TEXTURE_KEYS.dreamPool, T, T, (g) => {
+    g.fillStyle(PALETTE.dreamPoolDeep, 1);
+    g.fillRect(0, 0, T, T);
+    g.fillStyle(PALETTE.dreamPool, 1);
+    g.fillRect(0, 0, T, T - 6);
+    g.fillStyle(0x8f8fe0, 0.7);
+    g.fillRect(4, 7, 9, 2);
+    g.fillRect(17, 15, 11, 2);
+    scatter(g, PALETTE.sparkle, 3, T, T, 1, 47);
+  });
+
+  // Neuron tree (transparent, drawn over grove ground).
+  make(scene, TEXTURE_KEYS.neuronTree, T, T, (g) => {
+    g.fillStyle(0x4a3a2a, 1);
+    g.fillRect(14, 20, 4, 11); // trunk
+    g.fillStyle(PALETTE.tree, 1);
+    g.fillCircle(16, 12, 9);
+    g.fillCircle(9, 16, 5);
+    g.fillCircle(23, 16, 5);
+    g.fillStyle(PALETTE.treeGlow, 0.9);
+    g.fillCircle(13, 9, 1.5);
+    g.fillCircle(19, 13, 1.5);
+    g.fillCircle(21, 17, 1.5);
   });
 
   // Signpost decoration tile (also an interactable).
@@ -255,6 +292,52 @@ function buildCrops(scene) {
 }
 
 // ---------------------------------------------------------------------------
+// DREAM BLOOM crop stages (32x32) — lavender, dreamy
+// ---------------------------------------------------------------------------
+function buildDreamCrops(scene) {
+  make(scene, TEXTURE_KEYS.cropDreamSeed, T, T, (g) => {
+    g.fillStyle(PALETTE.dreamCrop, 1);
+    g.fillCircle(16, 22, 3);
+    g.fillStyle(PALETTE.sparkle, 0.8);
+    g.fillCircle(16, 22, 1);
+  });
+  make(scene, TEXTURE_KEYS.cropDreamSprout, T, T, (g) => {
+    g.fillStyle(0x5a6f8a, 1);
+    g.fillRect(15, 16, 2, 8);
+    g.fillStyle(PALETTE.dreamCrop, 1);
+    g.fillCircle(12, 16, 3);
+    g.fillCircle(20, 16, 3);
+  });
+  make(scene, TEXTURE_KEYS.cropDreamBud, T, T, (g) => {
+    g.fillStyle(0x5a6f8a, 1);
+    g.fillRect(15, 14, 2, 12);
+    g.fillStyle(PALETTE.dreamCrop, 1);
+    g.fillCircle(11, 16, 3);
+    g.fillCircle(21, 16, 3);
+    g.fillStyle(PALETTE.dreamCropReady, 1);
+    g.fillCircle(16, 11, 5);
+    g.fillStyle(PALETTE.sparkle, 0.7);
+    g.fillCircle(15, 10, 1);
+  });
+  make(scene, TEXTURE_KEYS.cropDreamReady, T, T, (g) => {
+    g.fillStyle(0x5a6f8a, 1);
+    g.fillRect(15, 16, 2, 10);
+    g.fillStyle(PALETTE.dreamCrop, 1);
+    g.fillCircle(10, 18, 3);
+    g.fillCircle(22, 18, 3);
+    g.fillStyle(PALETTE.altarGlow, 0.35);
+    g.fillCircle(16, 11, 9);
+    g.fillStyle(PALETTE.dreamCropReady, 1);
+    g.fillCircle(13, 11, 4);
+    g.fillCircle(19, 11, 4);
+    g.fillCircle(16, 7, 4);
+    g.fillStyle(PALETTE.sparkle, 0.9);
+    g.fillCircle(12, 9, 1);
+    g.fillCircle(18, 6, 1);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // BUILDINGS
 // ---------------------------------------------------------------------------
 function buildBuildings(scene) {
@@ -318,6 +401,29 @@ function buildBuildings(scene) {
     // roof ridge
     g.fillStyle(0x393255, 1);
     g.fillRect(10, 12, cw - 20, 8);
+  });
+
+  // Dream Altar — Stage 2 goal building (dim base + glow overlay).
+  make(scene, TEXTURE_KEYS.dreamAltar, cw, ch, (g) => {
+    g.fillStyle(PALETTE.altarDim, 1);
+    g.fillRoundedRect(20, 22, cw - 40, ch - 24, 8);
+    // stepped plinth
+    g.fillStyle(0x3f3460, 1);
+    g.fillRect(34, ch - 22, cw - 68, 16);
+    g.fillRect(48, ch - 12, cw - 96, 10);
+    // central crystal
+    g.fillStyle(0x6b5aa0, 1);
+    g.fillTriangle(cw / 2 - 12, ch - 26, cw / 2 + 12, ch - 26, cw / 2, 14);
+    // arch pillars
+    g.fillStyle(0x4a3f70, 1);
+    g.fillRect(24, 18, 8, ch - 30);
+    g.fillRect(cw - 32, 18, 8, ch - 30);
+  });
+  make(scene, GEN_KEYS.dreamAltarGlow, cw, ch, (g) => {
+    g.fillStyle(PALETTE.altarGlow, 1);
+    g.fillTriangle(cw / 2 - 12, ch - 26, cw / 2 + 12, ch - 26, cw / 2, 14);
+    g.fillStyle(0xfff4c4, 0.5);
+    g.fillCircle(cw / 2, ch / 2, 26);
   });
 
   // Glow overlay (drawn on top, alpha controlled by ArchiveSystem).
@@ -439,6 +545,24 @@ function buildIcons(scene) {
     g.fillStyle(PALETTE.sparkle, 0.9);
     g.fillCircle(9, 7, 1);
   });
+
+  make(scene, GEN_KEYS.iconDreamSeed, S, S, (g) => {
+    g.fillStyle(PALETTE.dreamCrop, 1);
+    g.fillEllipse(12, 13, 8, 11);
+    g.fillStyle(PALETTE.sparkle, 0.9);
+    g.fillCircle(10, 10, 1.5);
+  });
+
+  make(scene, GEN_KEYS.iconDreamBloom, S, S, (g) => {
+    g.fillStyle(PALETTE.altarGlow, 0.35);
+    g.fillCircle(12, 12, 9);
+    g.fillStyle(PALETTE.dreamCropReady, 1);
+    g.fillCircle(9, 13, 4);
+    g.fillCircle(15, 13, 4);
+    g.fillCircle(12, 8, 4);
+    g.fillStyle(PALETTE.sparkle, 0.9);
+    g.fillCircle(9, 7, 1);
+  });
 }
 
 // Generate every placeholder texture that did not arrive as a real asset.
@@ -446,6 +570,7 @@ export function generatePlaceholderTextures(scene) {
   buildTiles(scene);
   buildCharacters(scene);
   buildCrops(scene);
+  buildDreamCrops(scene);
   buildBuildings(scene);
   buildFxUi(scene);
   buildIcons(scene);

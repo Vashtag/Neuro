@@ -151,6 +151,10 @@ export const FIELD_NOTES = {
     title: 'Field Notes',
     body: 'The Forgetting Fog is clearing.\n\nExplore the restored path north of the Archive.'
   },
+  explore_grove: {
+    title: 'Field Notes',
+    body: 'Synapse Grove is open to the north.\n\nDr. Hebb mentioned Dream Blooms grow there.'
+  },
   complete: {
     title: 'Field Notes',
     body: 'Pathway restored.\n\nSynapse Grove is now reachable.\nFurther regions coming soon.'

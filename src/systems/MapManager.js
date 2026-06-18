@@ -10,9 +10,10 @@ const T = GAME_CONFIG.tileSize;
 // footprints encoded in MAP_DATA; kept here so each building renders as one
 // cohesive sprite rather than per-tile.
 const BUILDINGS = [
-  { key: TEXTURE_KEYS.somaCottage, tx: 16, ty: 21, tw: 5, th: 3, id: 'somaCottage' },
-  { key: TEXTURE_KEYS.memoryArchive, tx: 17, ty: 6, tw: 5, th: 3, id: 'memoryArchive' },
-  { key: TEXTURE_KEYS.hebbHut, tx: 5, ty: 10, tw: 4, th: 3, id: 'hebbHut' }
+  { key: TEXTURE_KEYS.somaCottage, tx: 16, ty: 31, tw: 5, th: 3, id: 'somaCottage' },
+  { key: TEXTURE_KEYS.memoryArchive, tx: 17, ty: 16, tw: 5, th: 3, id: 'memoryArchive' },
+  { key: TEXTURE_KEYS.hebbHut, tx: 5, ty: 20, tw: 4, th: 3, id: 'hebbHut' },
+  { key: TEXTURE_KEYS.dreamAltar, tx: 17, ty: 2, tw: 5, th: 3, id: 'dreamAltar' }
 ];
 
 // MapManager: renders the hard-coded tile map, places building sprites, and
@@ -57,15 +58,23 @@ export default class MapManager {
         const wx = x * T;
         const wy = y * T;
 
-        // Buildings and decor sit on a ground floor; draw ground underneath.
-        const onFloor = type.building || type.decor;
-        const baseKey = onFloor ? TEXTURE_KEYS.neuralGround : TEXTURE_KEYS[type.key];
+        // Buildings, decor and trees sit on a ground floor; draw ground under.
+        const onFloor = type.building || type.decor || type.tree;
+        const floorKey = TEXTURE_KEYS[type.floor || 'neuralGround'];
+        const baseKey = onFloor ? floorKey : TEXTURE_KEYS[type.key];
         this.scene.add.image(wx, wy, baseKey).setOrigin(0, 0).setDepth(-10);
 
         if (char === TILE.DECOR) {
           this.scene.add
             .image(wx, wy, TEXTURE_KEYS.signpost)
             .setOrigin(0, 0)
+            .setDepth(wy + T);
+        }
+
+        if (type.tree) {
+          this.scene.add
+            .image(wx + T / 2, wy + T / 2, TEXTURE_KEYS.neuronTree)
+            .setOrigin(0.5)
             .setDepth(wy + T);
         }
 
@@ -100,6 +109,16 @@ export default class MapManager {
       if (b.id === 'memoryArchive') {
         this.archiveGlowSprite = this.scene.add
           .image(b.tx * T, b.ty * T, TEX_GEN_KEYS.archiveGlow)
+          .setOrigin(0, 0)
+          .setDepth((b.ty + b.th) * T + 1)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setAlpha(0);
+      }
+
+      // Dream Altar glow overlay (driven by the Stage 2 goal in S2.4).
+      if (b.id === 'dreamAltar') {
+        this.dreamAltarGlowSprite = this.scene.add
+          .image(b.tx * T, b.ty * T, TEX_GEN_KEYS.dreamAltarGlow)
           .setOrigin(0, 0)
           .setDepth((b.ty + b.th) * T + 1)
           .setBlendMode(Phaser.BlendModes.ADD)

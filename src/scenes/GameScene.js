@@ -115,6 +115,7 @@ export default class GameScene extends Phaser.Scene {
     return {
       onNpc: () => this.talkToHebb(),
       onArchive: () => this.archive.deposit(),
+      onDreamAltar: () => this.onDreamAltar(),
       onSleep: () => this.daySystem.promptSleep(),
       onSign: (zone) => msg(zone.message || 'A weathered sign.', 3200),
       onFarm: (tile) => this.farming.doAction(tile),
@@ -154,16 +155,16 @@ export default class GameScene extends Phaser.Scene {
     if (this.soundManager) this.soundManager.play(key);
   }
 
-  // Fires once when the player first steps onto the restored teaser path.
+  // Fires once when the player first steps onto the restored teaser path that
+  // leads up into Synapse Grove.
   checkTeaserReached() {
     if (!this.state.archive.fogCleared || this.state.tutorial.reachedTeaserPath) return;
     const tile = this.map.worldToTile(this.player.x, this.player.y);
-    if (tile.y <= 2) {
+    if (tile.y <= 12) {
       this.state.tutorial.reachedTeaserPath = true;
-      this.updateFieldNotes(); // -> complete
+      this.updateFieldNotes(); // -> explore_grove
       this.sfx('fogClear');
-      this.player.setInputLocked(true);
-      this.ui.showCompletion(COMPLETION_TEXT.title, COMPLETION_TEXT.body);
+      this.ui.showMessage('The fog has lifted. Synapse Grove opens to the north.', 3000);
     }
   }
 
@@ -185,12 +186,18 @@ export default class GameScene extends Phaser.Scene {
     const s = this.state;
     let step;
     if (!s.tutorial.metDrHebb) step = 'talk_to_hebb';
-    else if (s.archive.fogCleared) step = s.tutorial.reachedTeaserPath ? 'complete' : 'explore_path';
+    else if (s.archive.fogCleared) step = s.tutorial.reachedTeaserPath ? 'explore_grove' : 'explore_path';
     else if (carryingBerries(s)) step = 'archive_berries';
     else if (hasReadyCrop(s)) step = 'harvest_berries';
     else step = 'grow_berries';
     s.fieldNotesStep = step;
     this.ui.refreshFieldNotes?.(s);
+  }
+
+  // Placeholder Dream Altar interaction (made functional in S2.4).
+  onDreamAltar() {
+    this.ui.showMessage('The Dream Altar is dormant. It is waiting for something grown from rest.');
+    this.sfx('unavailable');
   }
 
   // --- Dr. Hebb dialogue ---

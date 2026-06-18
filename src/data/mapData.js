@@ -1,16 +1,10 @@
-// Hard-coded Hippocampus Hollow map (40x30, 32px tiles).
+// Hard-coded map (40x40, 32px tiles).
 //
-// Layout (north = top):
-//   - Synapse Grove teaser path band at the very north (rows 1-2)
-//   - Forgetting Fog gate just south of it (rows 3-4) — the ONLY route north,
-//     flanked by border so it is a true gate
-//   - Memory Archive (north-center, rows 6-8) with walkable lanes either side
-//   - A clearing that opens to full width at row 9
-//   - Dr. Hebb's Hut (west) and Dream Pond (east) around rows 10-12
-//   - Memory Farm 5x5 plot (center, rows 14-18)
-//   - Soma Cottage (center, rows 21-23) with the player starting just south
-//
-// 'D' tiles are decorative sign-posts that double as interactables.
+// Two regions stacked vertically:
+//   - Synapse Grove (north, rows 0-10): opened after the Forgetting Fog clears.
+//     Holds the Dream Altar, a Dream Pool, a Dream Bloom plot and neuron trees.
+//   - Hippocampus Hollow (rows 11-39): the original MVP village, shifted down by
+//     10 rows. The fog gate (rows 13-14) is the only route between them.
 
 export const TILE = {
   BORDER: '#',
@@ -18,16 +12,22 @@ export const TILE = {
   GROUND_ALT: '_',
   PATH: ',',
   SOIL: 'S',
+  DREAM_SOIL: 'B',
   WATER: 'W',
   COTTAGE: 'C',
   ARCHIVE: 'A',
   HUT: 'H',
   FOG: 'F',
   TEASER: 'T',
-  DECOR: 'D'
+  DECOR: 'D',
+  GROVE: 'g',
+  DREAM_POOL: 'P',
+  ALTAR: 'R',
+  TREE: 'Y'
 };
 
-// Per-symbol properties. `farmable` marks the 5x5 plot. `key` maps to a texture.
+// Per-symbol properties. `farmable` marks plots (with a crop type). `floor`
+// chooses the ground texture drawn under buildings/decor/trees.
 export const TILE_TYPES = {
   '#': { key: 'border', walkable: false },
   '.': { key: 'neuralGround', walkable: true },
@@ -41,54 +41,67 @@ export const TILE_TYPES = {
   'H': { key: 'hebbHut', walkable: false, building: true },
   'F': { key: 'fog', walkable: false, fog: true },
   'T': { key: 'teaser', walkable: true },
-  'D': { key: 'signpost', walkable: false, decor: true }
+  'D': { key: 'signpost', walkable: false, decor: true },
+  'g': { key: 'groveGround', walkable: true },
+  'P': { key: 'dreamPool', walkable: false },
+  'R': { key: 'dreamAltar', walkable: false, building: true, floor: 'groveGround' },
+  'Y': { key: 'neuronTree', walkable: false, tree: true, floor: 'groveGround' }
 };
 
-// 40 columns x 30 rows. Validated at load time (see GameScene).
+// 40 columns x 40 rows. Validated at load time (see GameScene).
 export const MAP_DATA = [
-  '########################################', // 0
-  '###############TTTTTTTTTT###############', // 1
-  '###############TTTTTTTTTT###############', // 2
-  '################FFFFFFFF################', // 3
-  '################FFFFFFFF################', // 4
-  '##############............##############', // 5
-  '##############D..AAAAA....##############', // 6
-  '##############...AAAAA....##############', // 7
-  '##############...AAAAA....##############', // 8
-  '#......................D...............#', // 9
-  '#....HHHH..................D.WWWWW.....#', // 10
-  '#....HHHH....................WWWWW.....#', // 11
-  '#....HHHH....................WWWWW.....#', // 12
-  '#.......D.D............................#', // 13
-  '#................SSSSS.................#', // 14
-  '#................SSSSS.................#', // 15
-  '#................SSSSS.................#', // 16
-  '#................SSSSS.................#', // 17
-  '#................SSSSS.................#', // 18
-  '#......................................#', // 19
-  '#.......................D..............#', // 20
-  '#...............CCCCC..................#', // 21
-  '#...............CCCCC..................#', // 22
-  '#...............CCCCC..................#', // 23
-  '#......................................#', // 24
-  '#......................................#', // 25
-  '#......................................#', // 26
-  '#......................................#', // 27
-  '#......................................#', // 28
-  '########################################'  // 29
+  '########################################', // 0  grove
+  '#ggYggggggggggggggggggggggggggggggggYgg#', // 1
+  '#ggggggggggggggggRRRRRggggggggggggggggg#', // 2  dream altar
+  '#ggggggggggggggggRRRRRggggggggggggggggg#', // 3
+  '#ggggPPPPPgggggggRRRRRgggggBBBBgggggggg#', // 4  pool / altar / dream plot
+  '#ggggPPPPPgggggggggggggggggBBBBgggggggg#', // 5
+  '#ggggPPPPPgggggggggggggggggBBBBgggggggg#', // 6
+  '#ggggggggggggggggggggggggggBBBBgggggggg#', // 7
+  '#gggggggYggggggggggggggggggggggggYggggg#', // 8
+  '#gggggggggggggggggggggggggggggggggggggg#', // 9
+  '#gggggggggggggggggggggggggggggggggggggg#', // 10 grove floor / neck
+  '###############TTTTTTTTTT###############', // 11 teaser path
+  '###############TTTTTTTTTT###############', // 12
+  '################FFFFFFFF################', // 13 fog gate
+  '################FFFFFFFF################', // 14
+  '##############............##############', // 15
+  '##############D..AAAAA....##############', // 16 memory archive
+  '##############...AAAAA....##############', // 17
+  '##############...AAAAA....##############', // 18
+  '#......................D...............#', // 19
+  '#....HHHH..................D.WWWWW.....#', // 20 hut / dream pond
+  '#....HHHH....................WWWWW.....#', // 21
+  '#....HHHH....................WWWWW.....#', // 22
+  '#.......D.D............................#', // 23
+  '#................SSSSS.................#', // 24 memory farm
+  '#................SSSSS.................#', // 25
+  '#................SSSSS.................#', // 26
+  '#................SSSSS.................#', // 27
+  '#................SSSSS.................#', // 28
+  '#......................................#', // 29
+  '#.......................D..............#', // 30
+  '#...............CCCCC..................#', // 31 soma cottage
+  '#...............CCCCC..................#', // 32
+  '#...............CCCCC..................#', // 33
+  '#......................................#', // 34
+  '#......................................#', // 35 player start
+  '#......................................#', // 36
+  '#......................................#', // 37
+  '#......................................#', // 38
+  '########################################'  // 39
 ];
 
 // Player wakes just south of the Soma Cottage door (tile coords).
-export const PLAYER_START_TILE = { x: 17, y: 25 };
+export const PLAYER_START_TILE = { x: 17, y: 35 };
 
-// Interactable zones, in TILE coordinates. width/height describe a footprint;
-// the interaction system uses proximity to the nearest edge.
+// Interactable zones, in TILE coordinates.
 export const INTERACTABLES = [
   {
     id: 'dr_hebb',
     type: 'npc',
     x: 6,
-    y: 13,
+    y: 23,
     width: 1,
     height: 1
   },
@@ -96,7 +109,7 @@ export const INTERACTABLES = [
     id: 'soma_cottage_door',
     type: 'sleep',
     x: 16,
-    y: 23,
+    y: 33,
     width: 5,
     height: 1,
     label: 'Soma Cottage'
@@ -105,17 +118,26 @@ export const INTERACTABLES = [
     id: 'memory_archive',
     type: 'archive',
     x: 17,
-    y: 6,
+    y: 16,
     width: 5,
     height: 3,
     label: 'Memory Archive'
+  },
+  {
+    id: 'dream_altar',
+    type: 'dream_altar',
+    x: 17,
+    y: 2,
+    width: 5,
+    height: 3,
+    label: 'Dream Altar'
   },
   // Future-crop tease signs (D tiles).
   {
     id: 'map_mushrooms_sign',
     type: 'sign',
     x: 14,
-    y: 6,
+    y: 16,
     width: 1,
     height: 1,
     message: 'Map Mushrooms: helpful for finding your way. Unhelpful if you already forgot why you came here.'
@@ -124,7 +146,7 @@ export const INTERACTABLES = [
     id: 'knowledge_herbs_sign',
     type: 'sign',
     x: 23,
-    y: 9,
+    y: 19,
     width: 1,
     height: 1,
     message: 'Knowledge Herbs: used for stable facts, concepts, and things you pretend you did not just Google.'
@@ -133,7 +155,7 @@ export const INTERACTABLES = [
     id: 'dream_pond_sign',
     type: 'sign',
     x: 27,
-    y: 10,
+    y: 20,
     width: 1,
     height: 1,
     message: 'Dream Pond. Future site of sleep-dependent consolidation research. Currently very damp.'
@@ -142,7 +164,7 @@ export const INTERACTABLES = [
     id: 'hebb_hut_sign',
     type: 'sign',
     x: 8,
-    y: 13,
+    y: 23,
     width: 1,
     height: 1,
     message: 'Dr. Hebb’s Hut. Please knock, unless you are a statistically significant result.'
@@ -151,7 +173,7 @@ export const INTERACTABLES = [
     id: 'emotion_flowers_sign',
     type: 'sign',
     x: 10,
-    y: 13,
+    y: 23,
     width: 1,
     height: 1,
     message: 'Emotion Flowers: some memories grow brighter when feelings are nearby. Handle gently.'
@@ -160,17 +182,17 @@ export const INTERACTABLES = [
     id: 'rhythm_roots_sign',
     type: 'sign',
     x: 24,
-    y: 20,
+    y: 30,
     width: 1,
     height: 1,
     message: 'Rhythm Roots: improve through repetition. Very smug about practice.'
   },
-  // Synapse Grove teaser interactables (non-blocking decorations drawn in-scene).
+  // Synapse Grove teaser decorations (drawn in-scene, non-blocking).
   {
     id: 'synapse_signpost',
     type: 'sign',
     x: 16,
-    y: 2,
+    y: 12,
     width: 1,
     height: 1,
     message: 'Synapse Grove — communication, connection, and questionable electrical decisions.'
@@ -179,7 +201,7 @@ export const INTERACTABLES = [
     id: 'synapse_firefly',
     type: 'sign',
     x: 20,
-    y: 1,
+    y: 11,
     width: 1,
     height: 1,
     message: 'A Synapse Spark flickers nearby. It seems excited to become a future collectible.'
@@ -187,18 +209,17 @@ export const INTERACTABLES = [
   {
     id: 'axon_bridge',
     type: 'sign',
-    x: 23,
+    x: 19,
     y: 1,
     width: 1,
     height: 1,
-    message: 'This axon bridge leads deeper into Synapse Grove. The signal is not stable enough yet.'
+    message: 'An axon bridge heads further north. The signal beyond is not stable enough yet.'
   }
 ];
 
-// The fog gate band (tile rect) — used for the "fog blocks the path" message
-// and to convert these tiles to walkable when the fog clears.
+// The fog gate band (tile rect) — converted to walkable when the fog clears.
 export const FOG_TILES = [];
-for (let y = 3; y <= 4; y += 1) {
+for (let y = 13; y <= 14; y += 1) {
   for (let x = 16; x <= 23; x += 1) {
     FOG_TILES.push({ x, y });
   }
