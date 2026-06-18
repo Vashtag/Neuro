@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SCENES, GAME_CONFIG, PALETTE } from '../config.js';
 import { GEN_KEYS } from '../systems/TextureFactory.js';
 import { FIELD_NOTES } from '../data/dialogueData.js';
+import { CODEX_ENTRIES, codexProgress } from '../data/codexData.js';
 
 // Text colors: parchment panels need dark INK; purple headers/tabs use CREAM.
 const FONT = 'Trebuchet MS, sans-serif';
@@ -25,6 +26,7 @@ export default class UIScene extends Phaser.Scene {
     this.buildToast();
     this.buildDialogue();
     this.buildConfirm();
+    this.buildControlsHint();
 
     // Populate from the (already created) GameScene state.
     const gs = this.scene.get(SCENES.GAME);
@@ -385,6 +387,159 @@ export default class UIScene extends Phaser.Scene {
     if (this.completionBox) {
       const box = this.completionBox;
       this.tweens.add({ targets: box, alpha: 0, duration: 300, onComplete: () => box.destroy() });
+    }
+    return true;
+  }
+
+  // Small persistent controls hint, bottom-left.
+  buildControlsHint() {
+    const { canvasHeight: h } = GAME_CONFIG;
+    this.add
+      .text(12, h - 18, 'WASD move   ·   E interact   ·   J field guide', {
+        fontFamily: FONT,
+        fontSize: '13px',
+        color: '#b9aed0'
+      })
+      .setOrigin(0, 0.5)
+      .setDepth(900)
+      .setAlpha(0.7);
+  }
+
+  // --- Field Guide / Codex overlay ---
+  isCodexActive() {
+    return this.codex && this.codex.active;
+  }
+
+  openCodex(state) {
+    const { canvasWidth: w, canvasHeight: h } = GAME_CONFIG;
+    if (!this.codex) this.codex = { active: false };
+    if (this.codex.active) return;
+    this.codex.active = true;
+
+    const c = this.add.container(0, 0).setDepth(1600).setAlpha(0);
+
+    const dim = this.add.graphics();
+    dim.fillStyle(0x0c0a16, 0.72);
+    dim.fillRect(0, 0, w, h);
+    c.add(dim);
+
+    const panelW = 884;
+    const panelH = 580;
+    const px = (w - panelW) / 2;
+    const py = (h - panelH) / 2;
+    const panel = this.add.graphics();
+    panel.fillStyle(PALETTE.uiPanel, 0.98);
+    panel.fillRoundedRect(px, py, panelW, panelH, 16);
+    panel.lineStyle(3, PALETTE.uiPanelEdge, 1);
+    panel.strokeRoundedRect(px, py, panelW, panelH, 16);
+    c.add(panel);
+
+    const prog = codexProgress(state);
+    const title = this.add
+      .text(px + 28, py + 22, 'Field Guide', { fontFamily: FONT, fontSize: '26px', color: CREAM, fontStyle: 'bold' })
+      .setOrigin(0, 0);
+    const sub = this.add
+      .text(px + panelW - 28, py + 30, `${prog.found} / ${prog.total} discovered`, {
+        fontFamily: FONT,
+        fontSize: '16px',
+        color: GOLD
+      })
+      .setOrigin(1, 0);
+    c.add(title);
+    c.add(sub);
+
+    // 2 columns x 3 rows of entry cards.
+    const cols = 2;
+    const cardW = 412;
+    const cardH = 152;
+    const gapX = 20;
+    const gapY = 16;
+    const gridX = px + 28;
+    const gridY = py + 66;
+
+    CODEX_ENTRIES.forEach((entry, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const cx = gridX + col * (cardW + gapX);
+      const cy = gridY + row * (cardH + gapY);
+      const found = entry.discovered(state);
+
+      const card = this.add.graphics();
+      card.fillStyle(found ? 0x3a2f55 : 0x241d36, 1);
+      card.fillRoundedRect(cx, cy, cardW, cardH, 10);
+      card.lineStyle(2, found ? PALETTE.uiPanelEdge : 0x3a3158, 1);
+      card.strokeRoundedRect(cx, cy, cardW, cardH, 10);
+      c.add(card);
+
+      // Icon box
+      const boxX = cx + 16;
+      const boxY = cy + 16;
+      const boxS = 56;
+      const ibox = this.add.graphics();
+      ibox.fillStyle(0x1c1730, 1);
+      ibox.fillRoundedRect(boxX, boxY, boxS, boxS, 8);
+      c.add(ibox);
+
+      if (found) {
+        const icon = this.add.image(boxX + boxS / 2, boxY + boxS / 2, entry.icon).setOrigin(0.5);
+        const scale = Math.min((boxS - 12) / icon.width, (boxS - 12) / icon.height);
+        icon.setScale(scale);
+        c.add(icon);
+
+        const name = this.add
+          .text(cx + 86, cy + 18, entry.title, { fontFamily: FONT, fontSize: '19px', color: CREAM, fontStyle: 'bold' })
+          .setOrigin(0, 0);
+        const concept = this.add
+          .text(cx + 86, cy + 42, entry.concept, { fontFamily: FONT, fontSize: '14px', color: GOLD, fontStyle: 'italic' })
+          .setOrigin(0, 0);
+        const body = this.add
+          .text(cx + 16, cy + 80, entry.body, {
+            fontFamily: FONT,
+            fontSize: '13px',
+            color: '#d8cdbd',
+            lineSpacing: 3,
+            wordWrap: { width: cardW - 32 }
+          })
+          .setOrigin(0, 0);
+        c.add(name);
+        c.add(concept);
+        c.add(body);
+      } else {
+        const q = this.add
+          .text(boxX + boxS / 2, boxY + boxS / 2, '?', { fontFamily: FONT, fontSize: '30px', color: '#5a4f7a', fontStyle: 'bold' })
+          .setOrigin(0.5);
+        const name = this.add
+          .text(cx + 86, cy + 26, 'Undiscovered', { fontFamily: FONT, fontSize: '18px', color: '#6a5f8a', fontStyle: 'bold' })
+          .setOrigin(0, 0);
+        const body = this.add
+          .text(cx + 16, cy + 80, 'Keep exploring Neurobloom to reveal this entry.', {
+            fontFamily: FONT,
+            fontSize: '13px',
+            color: '#5a5078',
+            wordWrap: { width: cardW - 32 }
+          })
+          .setOrigin(0, 0);
+        c.add(q);
+        c.add(name);
+        c.add(body);
+      }
+    });
+
+    const hint = this.add
+      .text(w / 2, py + panelH - 22, 'J or Esc to close', { fontFamily: FONT, fontSize: '14px', color: INK_SOFT })
+      .setOrigin(0.5);
+    c.add(hint);
+
+    this.codexBox = c;
+    this.tweens.add({ targets: c, alpha: 1, duration: 250 });
+  }
+
+  closeCodex() {
+    if (!this.codex || !this.codex.active) return false;
+    this.codex.active = false;
+    if (this.codexBox) {
+      const box = this.codexBox;
+      this.tweens.add({ targets: box, alpha: 0, duration: 200, onComplete: () => box.destroy() });
     }
     return true;
   }

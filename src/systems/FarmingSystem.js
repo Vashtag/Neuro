@@ -171,6 +171,7 @@ export default class FarmingSystem {
       entry.crop = null;
       entry.wateredToday = false;
       if (isMemory) this.state.tutorial.harvestedFirstBerry = true;
+      else if (entry.cropType === 'dream_bloom') this.state.tutorial.harvestedFirstDream = true;
       this.renderEntry(entry);
       this.spawnHarvestFx(entry);
       ui.showMessage(def.messages.harvest);
