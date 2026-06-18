@@ -12,6 +12,91 @@ export default class UIScene extends Phaser.Scene {
   create() {
     this.scene.bringToTop();
     this.buildToast();
+    this.buildDialogue();
+  }
+
+  // --- dialogue box (bottom, multi-line, advanced with E/Space) ---
+  buildDialogue() {
+    const { canvasWidth: w, canvasHeight: h } = GAME_CONFIG;
+    const boxW = w - 80;
+    const boxH = 120;
+    const x = 40;
+    const y = h - boxH - 24;
+
+    this.dialogue = {
+      active: false,
+      lines: [],
+      index: 0,
+      onComplete: null
+    };
+
+    this.dialogueBox = this.add.container(0, 0).setDepth(1200).setVisible(false);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(PALETTE.uiPanel, 0.96);
+    bg.fillRoundedRect(x, y, boxW, boxH, 12);
+    bg.lineStyle(3, PALETTE.uiPanelEdge, 1);
+    bg.strokeRoundedRect(x, y, boxW, boxH, 12);
+
+    const speaker = this.add.text(x + 20, y + 12, '', {
+      fontFamily: 'Trebuchet MS, sans-serif',
+      fontSize: '16px',
+      color: '#f6d785',
+      fontStyle: 'bold'
+    });
+
+    const body = this.add.text(x + 20, y + 40, '', {
+      fontFamily: 'Trebuchet MS, sans-serif',
+      fontSize: '18px',
+      color: '#f4ecdf',
+      wordWrap: { width: boxW - 40 },
+      lineSpacing: 4
+    });
+
+    const hint = this.add
+      .text(x + boxW - 18, y + boxH - 14, 'E ▸', {
+        fontFamily: 'Trebuchet MS, sans-serif',
+        fontSize: '14px',
+        color: '#9a86d8'
+      })
+      .setOrigin(1, 1);
+    this.tweens.add({ targets: hint, alpha: 0.3, duration: 700, yoyo: true, repeat: -1 });
+
+    this.dialogueSpeaker = speaker;
+    this.dialogueBody = body;
+    this.dialogueBox.add([bg, speaker, body, hint]);
+  }
+
+  isDialogueActive() {
+    return this.dialogue && this.dialogue.active;
+  }
+
+  showDialogue(speaker, lines, onComplete) {
+    this.dialogue.active = true;
+    this.dialogue.lines = lines;
+    this.dialogue.index = 0;
+    this.dialogue.onComplete = onComplete || null;
+    this.dialogueSpeaker.setText(speaker || '');
+    this.dialogueBody.setText(lines[0] || '');
+    this.dialogueBox.setVisible(true).setAlpha(0);
+    this.tweens.add({ targets: this.dialogueBox, alpha: 1, duration: 140 });
+  }
+
+  // Advance to the next line, or close and fire onComplete. Returns true if it
+  // consumed the input (so the caller skips other interactions).
+  advanceDialogue() {
+    if (!this.dialogue.active) return false;
+    this.dialogue.index += 1;
+    if (this.dialogue.index >= this.dialogue.lines.length) {
+      this.dialogue.active = false;
+      this.dialogueBox.setVisible(false);
+      const cb = this.dialogue.onComplete;
+      this.dialogue.onComplete = null;
+      if (cb) cb();
+    } else {
+      this.dialogueBody.setText(this.dialogue.lines[this.dialogue.index]);
+    }
+    return true;
   }
 
   // --- transient message toast (bottom-center) ---
