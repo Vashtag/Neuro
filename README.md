@@ -46,8 +46,8 @@ npm run preview    # preview the production build
 
 Deployment to GitHub Pages is automated via `.github/workflows/deploy.yml`,
 which builds and publishes on every push to `main`. The Vite `base` is set to
-`/neuro/` to match the repository name, so the live site is served at
-`https://vashtag.github.io/neuro/`.
+`/Neuro/` to match the repository name (GitHub Pages paths are case-sensitive),
+so the live site is served at `https://vashtag.github.io/Neuro/`.
 
 To enable it once: **Settings → Pages → Build and deployment → Source: GitHub
 Actions**.

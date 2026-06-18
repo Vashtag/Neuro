@@ -3,7 +3,7 @@ name: Deploy Neurobloom to GitHub Pages
 # Builds the Vite project and publishes the dist/ folder to GitHub Pages.
 # Enable once in the repo: Settings → Pages → Build and deployment → Source:
 # "GitHub Actions". The site will then be served at:
-#   https://vashtag.github.io/neuro/
+#   https://vashtag.github.io/Neuro/  (case-sensitive; matches the repo name)
 
 on:
   push:
