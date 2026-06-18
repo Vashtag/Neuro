@@ -5,8 +5,9 @@ import Player from '../objects/Player.js';
 import NPC from '../objects/NPC.js';
 import InteractionSystem from '../systems/InteractionSystem.js';
 import { PLAYER_START_TILE, INTERACTABLES } from '../data/mapData.js';
-import { createDefaultGameState } from '../data/gameState.js';
+import { createDefaultGameState, carryingBerries, hasReadyCrop } from '../data/gameState.js';
 import { selectHebbStage } from '../data/dialogueData.js';
+import FarmingSystem from '../systems/FarmingSystem.js';
 
 // GameScene: the world. Renders the Hippocampus Hollow map and (in later
 // milestones) hosts the player, farming, interactions, archive and day systems.
@@ -43,6 +44,10 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
     this.cameras.main.setRoundPixels(true);
 
+    // --- Farming ---
+    this.farming = new FarmingSystem(this);
+    this.farming.init();
+
     // --- UI reference + interaction ---
     this.ui = this.scene.get(SCENES.UI);
     this.interaction = new InteractionSystem(this, this.player, this.map, this.buildHandlers());
@@ -64,7 +69,9 @@ export default class GameScene extends Phaser.Scene {
         this.player.setPosition(w.x, w.y);
       },
       state: () => this.state,
-      talk: () => this.talkToHebb()
+      talk: () => this.talkToHebb(),
+      giveKit: () => this.grantStarterKit(),
+      grow: () => this.farming.growOvernight()
     };
   }
 
@@ -77,9 +84,25 @@ export default class GameScene extends Phaser.Scene {
       onArchive: () => msg('The Archive hums softly. It is waiting for retrieved memories.'),
       onSleep: () => msg('A cozy door. (sleep system arrives in M8)'),
       onSign: (zone) => msg(zone.message || 'A weathered sign.', 3200),
-      onFarm: (tile) => msg(`Memory soil at (${tile.x}, ${tile.y}). (farming arrives in M7)`),
+      onFarm: (tile) => this.farming.doAction(tile),
       onUnavailable: () => msg('Nothing to do here right now.')
     };
+  }
+
+  // Placeholder SFX hook; replaced by the WebAudio SoundManager in M11.
+  sfx() {}
+
+  // Derive the Field Notes objective from current progress and refresh the UI.
+  updateFieldNotes() {
+    const s = this.state;
+    let step;
+    if (!s.tutorial.metDrHebb) step = 'talk_to_hebb';
+    else if (s.archive.fogCleared) step = s.tutorial.reachedTeaserPath ? 'complete' : 'explore_path';
+    else if (carryingBerries(s)) step = 'archive_berries';
+    else if (hasReadyCrop(s)) step = 'harvest_berries';
+    else step = 'grow_berries';
+    s.fieldNotesStep = step;
+    this.ui.refreshFieldNotes?.(s);
   }
 
   // --- Dr. Hebb dialogue ---
