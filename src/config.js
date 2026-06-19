@@ -21,6 +21,7 @@ export const GAME_CONFIG = {
 export const SCENES = {
   BOOT: 'BootScene',
   PRELOAD: 'PreloadScene',
+  MENU: 'MenuScene',
   GAME: 'GameScene',
   UI: 'UIScene'
 };

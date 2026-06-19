@@ -408,6 +408,23 @@ export default class UIScene extends Phaser.Scene {
     return true;
   }
 
+  // Brief "Saved" indicator (top-left, under the status bar). Throttled so
+  // frequent autosaves do not flicker.
+  flashSaved() {
+    const now = this.time.now;
+    if (this._lastSaveFlash && now - this._lastSaveFlash < 1600) return;
+    this._lastSaveFlash = now;
+    if (!this.savedText) {
+      this.savedText = this.add
+        .text(16, 66, '✓ Saved', { fontFamily: FONT, fontSize: '13px', color: '#bfe6b0', fontStyle: 'bold' })
+        .setOrigin(0, 0.5)
+        .setDepth(950);
+    }
+    this.tweens.killTweensOf(this.savedText);
+    this.savedText.setAlpha(1).setVisible(true);
+    this.tweens.add({ targets: this.savedText, alpha: 0, delay: 1000, duration: 600 });
+  }
+
   // Small persistent controls hint, bottom-left.
   buildControlsHint() {
     const { canvasHeight: h } = GAME_CONFIG;

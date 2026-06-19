@@ -56,7 +56,7 @@ export default class PreloadScene extends Phaser.Scene {
     // Keys that DID load (real PNGs) already exist and are skipped inside.
     generatePlaceholderTextures(this);
 
-    this.scene.start(SCENES.GAME);
-    this.scene.launch(SCENES.UI);
+    // The title screen decides whether to continue or start a new garden.
+    this.scene.start(SCENES.MENU);
   }
 }

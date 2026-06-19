@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG, SCENES } from './config.js';
 import BootScene from './scenes/BootScene.js';
 import PreloadScene from './scenes/PreloadScene.js';
+import MenuScene from './scenes/MenuScene.js';
 import GameScene from './scenes/GameScene.js';
 import UIScene from './scenes/UIScene.js';
 
@@ -24,7 +25,7 @@ const phaserConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  scene: [BootScene, PreloadScene, GameScene, UIScene]
+  scene: [BootScene, PreloadScene, MenuScene, GameScene, UIScene]
 };
 
 // eslint-disable-next-line no-new
