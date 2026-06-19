@@ -44,8 +44,13 @@ export default class GameScene extends Phaser.Scene {
 
     // --- Audio (synthesized; resumes on first input) ---
     this.soundManager = new SoundManager();
-    this.input.keyboard.once('keydown', () => this.soundManager.ensureContext());
-    this.input.once('pointerdown', () => this.soundManager.ensureContext());
+    const wakeAudio = () => {
+      this.soundManager.ensureContext();
+      this.soundManager.startAmbient();
+      this.soundManager.setMuted(this.audioMuted === true);
+    };
+    this.input.keyboard.once('keydown', wakeAudio);
+    this.input.once('pointerdown', wakeAudio);
 
     // --- Central game state (load save if present) ---
     this.state = SaveSystem.load();
@@ -132,6 +137,9 @@ export default class GameScene extends Phaser.Scene {
       promptSleep: () => this.daySystem.promptSleep(),
       openCodex: () => this.openCodex()
     };
+
+    // From here on, autosaves may surface the "Saved" indicator.
+    this.ready = true;
   }
 
   // Contextual interaction handlers. Later milestones replace the placeholder
@@ -221,6 +229,16 @@ export default class GameScene extends Phaser.Scene {
     s.fieldNotesStep = step;
     this.ui.refreshFieldNotes?.(s);
     this.syncCodex(false);
+    this.autosave();
+  }
+
+  // Persist progress at every meaningful milestone (updateFieldNotes is called
+  // after plant/harvest, deposits, seed grants and region transitions). Sleep
+  // also saves via DaySystem. The "Saved" indicator is suppressed during the
+  // initial load and throttled by the UI.
+  autosave() {
+    SaveSystem.save(this.state);
+    if (this.ready) this.ui.flashSaved?.();
   }
 
   // Reveal newly-discovered Field Guide entries. Silent on load; toasts the
@@ -443,6 +461,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.syncUI(['seedPouch']);
     this.ui.showMessage('Received: NeuroHoe, Recall Can, Seed Pouch, Archive Satchel, and 5 Memory Seeds.', 3400);
+    this.autosave();
     // Surface the Dr. Hebb Field Guide entry after the kit message clears.
     this.time.delayedCall(3500, () => this.syncCodex(false));
   }

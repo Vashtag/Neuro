@@ -88,6 +88,10 @@ export default class SoundManager {
         case 'dialogue':
           this.note({ freq: 320, type: 'triangle', dur: 0.04, gain: 0.03 });
           break;
+        case 'confirm':
+          this.note({ freq: 523, type: 'sine', dur: 0.1, gain: 0.05 });
+          this.note({ freq: 784, type: 'sine', start: 0.07, dur: 0.14, gain: 0.05 });
+          break;
         case 'unavailable':
           this.note({ freq: 200, type: 'sine', dur: 0.07, gain: 0.03 });
           break;
@@ -99,7 +103,62 @@ export default class SoundManager {
     }
   }
 
+  // A soft, low ambient pad that loops for the whole session. Two detuned
+  // oscillators through a gentle gain; safe to call repeatedly.
+  startAmbient() {
+    if (!this.enabled || this.ambient) return;
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    try {
+      const bus = ctx.createGain();
+      bus.gain.value = this.muted ? 0 : 0.05;
+      bus.connect(this.master);
+
+      const voices = [98, 146.83, 196].map((freq, i) => {
+        const osc = ctx.createOscillator();
+        osc.type = i === 2 ? 'triangle' : 'sine';
+        osc.frequency.value = freq;
+        osc.detune.value = i * 4;
+        osc.connect(bus);
+        osc.start();
+        return osc;
+      });
+
+      // Slow "breathing" of the pad volume.
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.frequency.value = 0.06;
+      lfoGain.gain.value = 0.02;
+      lfo.connect(lfoGain);
+      lfoGain.connect(bus.gain);
+      lfo.start();
+
+      this.ambient = { bus, voices, lfo };
+    } catch (e) {
+      /* ambient is optional; never crash */
+    }
+  }
+
+  stopAmbient() {
+    if (!this.ambient) return;
+    try {
+      this.ambient.voices.forEach((o) => o.stop());
+      this.ambient.lfo.stop();
+    } catch (e) {
+      /* ignore */
+    }
+    this.ambient = null;
+  }
+
   setMuted(m) {
     this.muted = m;
+    // Gate the ambient pad too (it does not route through play()).
+    if (this.ambient && this.ambient.bus) {
+      try {
+        this.ambient.bus.gain.value = m ? 0 : 0.05;
+      } catch (e) {
+        /* ignore */
+      }
+    }
   }
 }
