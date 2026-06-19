@@ -9,8 +9,13 @@ export default class SoundManager {
   constructor() {
     this.ctx = null;
     this.master = null;
+    this.musicGain = null;
+    this.sfxGain = null;
     this.enabled = true;
     this.muted = false;
+    // Volumes (0..1); overridden by Settings on scene start.
+    this.musicVolume = 0.6;
+    this.sfxVolume = 0.8;
   }
 
   ensureContext() {
@@ -26,8 +31,15 @@ export default class SoundManager {
       }
       this.ctx = new AC();
       this.master = this.ctx.createGain();
-      this.master.gain.value = 0.5;
+      this.master.gain.value = this.muted ? 0 : 0.6;
       this.master.connect(this.ctx.destination);
+      // Separate buses so Music and SFX volumes are independent.
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.value = this.musicVolume;
+      this.musicGain.connect(this.master);
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.value = this.sfxVolume;
+      this.sfxGain.connect(this.master);
     } catch (e) {
       this.enabled = false;
     }
@@ -47,7 +59,7 @@ export default class SoundManager {
     g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     osc.connect(g);
-    g.connect(this.master);
+    g.connect(this.sfxGain || this.master);
     osc.start(t0);
     osc.stop(t0 + dur + 0.02);
   }
@@ -111,8 +123,8 @@ export default class SoundManager {
     if (!ctx) return;
     try {
       const bus = ctx.createGain();
-      bus.gain.value = this.muted ? 0 : 0.05;
-      bus.connect(this.master);
+      bus.gain.value = 0.05;
+      bus.connect(this.musicGain || this.master);
 
       const voices = [98, 146.83, 196].map((freq, i) => {
         const osc = ctx.createOscillator();
@@ -152,13 +164,40 @@ export default class SoundManager {
 
   setMuted(m) {
     this.muted = m;
-    // Gate the ambient pad too (it does not route through play()).
-    if (this.ambient && this.ambient.bus) {
+    // Master gate silences both buses (sfx + ambient pad) at once.
+    if (this.master) {
       try {
-        this.ambient.bus.gain.value = m ? 0 : 0.05;
+        this.master.gain.value = m ? 0 : 0.6;
       } catch (e) {
         /* ignore */
       }
     }
   }
+
+  setMusicVolume(v) {
+    this.musicVolume = clamp01(v);
+    if (this.musicGain) {
+      try {
+        this.musicGain.gain.value = this.musicVolume;
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  }
+
+  setSfxVolume(v) {
+    this.sfxVolume = clamp01(v);
+    if (this.sfxGain) {
+      try {
+        this.sfxGain.gain.value = this.sfxVolume;
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  }
+}
+
+function clamp01(v) {
+  if (Number.isNaN(v)) return 0;
+  return Math.max(0, Math.min(1, v));
 }

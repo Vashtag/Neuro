@@ -4,6 +4,8 @@ import { GEN_KEYS } from '../systems/TextureFactory.js';
 import { TEXTURE_KEYS } from '../data/assetManifest.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import SoundManager from '../systems/SoundManager.js';
+import { Settings } from '../systems/Settings.js';
+import SettingsPanel from '../objects/SettingsPanel.js';
 
 const FONT = 'Trebuchet MS, sans-serif';
 const CREAM = '#f4ecdf';
@@ -20,8 +22,10 @@ export default class MenuScene extends Phaser.Scene {
   create() {
     const { canvasWidth: w, canvasHeight: h } = GAME_CONFIG;
     this.sound2 = new SoundManager();
+    Settings.apply(Settings.load(), this.sound2);
     this.input.keyboard.once('keydown', () => this.sound2.ensureContext());
     this.input.once('pointerdown', () => this.sound2.ensureContext());
+    this.settingsPanel = new SettingsPanel(this, this.sound2);
 
     this.mode = 'menu'; // 'menu' | 'help' | 'confirm'
     this.selected = 0;
@@ -124,6 +128,10 @@ export default class MenuScene extends Phaser.Scene {
       up2: Phaser.Input.Keyboard.KeyCodes.UP,
       down: Phaser.Input.Keyboard.KeyCodes.S,
       down2: Phaser.Input.Keyboard.KeyCodes.DOWN,
+      left: Phaser.Input.Keyboard.KeyCodes.A,
+      left2: Phaser.Input.Keyboard.KeyCodes.LEFT,
+      right: Phaser.Input.Keyboard.KeyCodes.D,
+      right2: Phaser.Input.Keyboard.KeyCodes.RIGHT,
       confirm: Phaser.Input.Keyboard.KeyCodes.E,
       confirm2: Phaser.Input.Keyboard.KeyCodes.SPACE,
       confirm3: Phaser.Input.Keyboard.KeyCodes.ENTER,
@@ -139,6 +147,7 @@ export default class MenuScene extends Phaser.Scene {
     this.items = [];
     if (SaveSystem.hasSave()) this.items.push({ id: 'continue', label: 'Continue' });
     this.items.push({ id: 'new', label: 'New Game' });
+    this.items.push({ id: 'settings', label: 'Settings' });
     this.items.push({ id: 'help', label: 'How to Play' });
 
     const startY = h * 0.56;
@@ -176,6 +185,8 @@ export default class MenuScene extends Phaser.Scene {
     this.sound2.play('confirm');
     if (item.id === 'continue') {
       this.startGame();
+    } else if (item.id === 'settings') {
+      this.settingsPanel.open(() => this.renderSelection());
     } else if (item.id === 'help') {
       this.setMode('help');
     } else if (item.id === 'new') {
@@ -207,6 +218,18 @@ export default class MenuScene extends Phaser.Scene {
   update() {
     const k = this.keys;
     const pressed = (key) => Phaser.Input.Keyboard.JustDown(key);
+
+    if (this.settingsPanel.isActive()) {
+      this.settingsPanel.handle({
+        up: pressed(k.up) || pressed(k.up2),
+        down: pressed(k.down) || pressed(k.down2),
+        left: pressed(k.left) || pressed(k.left2),
+        right: pressed(k.right) || pressed(k.right2),
+        confirm: pressed(k.confirm) || pressed(k.confirm2) || pressed(k.confirm3),
+        back: pressed(k.back)
+      });
+      return;
+    }
 
     if (this.mode === 'help') {
       if (pressed(k.confirm) || pressed(k.confirm2) || pressed(k.back)) {

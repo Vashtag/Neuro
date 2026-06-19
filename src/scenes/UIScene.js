@@ -3,6 +3,7 @@ import { SCENES, GAME_CONFIG, PALETTE } from '../config.js';
 import { GEN_KEYS } from '../systems/TextureFactory.js';
 import { FIELD_NOTES } from '../data/dialogueData.js';
 import { CODEX_ENTRIES, codexProgress } from '../data/codexData.js';
+import SettingsPanel from '../objects/SettingsPanel.js';
 
 // Text colors: parchment panels need dark INK; purple headers/tabs use CREAM.
 const FONT = 'Trebuchet MS, sans-serif';
@@ -31,6 +32,103 @@ export default class UIScene extends Phaser.Scene {
     // Populate from the (already created) GameScene state.
     const gs = this.scene.get(SCENES.GAME);
     if (gs && gs.state && gs.syncUI) gs.syncUI();
+
+    // Reusable Settings overlay (shares the GameScene SoundManager).
+    this.settings = new SettingsPanel(this, gs ? gs.soundManager : null, 1850);
+  }
+
+  // --- pause menu (in-game) ---
+  isPauseActive() {
+    return this.pauseState && this.pauseState.active;
+  }
+
+  isSettingsActive() {
+    return this.settings && this.settings.isActive();
+  }
+
+  openSettings(onClose) {
+    if (this.settings) this.settings.open(onClose);
+  }
+
+  settingsHandle(nav) {
+    if (this.settings) this.settings.handle(nav);
+  }
+
+  openPause() {
+    if (this.isPauseActive()) return;
+    const { canvasWidth: w, canvasHeight: h } = GAME_CONFIG;
+    this.pauseState = { active: true, sel: 0, ids: ['resume', 'settings', 'title'] };
+
+    const c = this.add.container(0, 0).setDepth(1750).setAlpha(0);
+    const dim = this.add.graphics();
+    dim.fillStyle(0x0c0a16, 0.7);
+    dim.fillRect(0, 0, w, h);
+    c.add(dim);
+
+    const pw = 360;
+    const ph = 296;
+    const px = (w - pw) / 2;
+    const py = (h - ph) / 2;
+    const panel = this.add.graphics();
+    panel.fillStyle(PALETTE.uiPanel, 0.98);
+    panel.fillRoundedRect(px, py, pw, ph, 16);
+    panel.lineStyle(3, PALETTE.uiPanelEdge, 1);
+    panel.strokeRoundedRect(px, py, pw, ph, 16);
+    c.add(panel);
+
+    c.add(
+      this.add
+        .text(w / 2, py + 44, 'Paused', { fontFamily: FONT, fontSize: '28px', color: GOLD, fontStyle: 'bold' })
+        .setOrigin(0.5)
+    );
+
+    const labels = ['Resume', 'Settings', 'Return to Title'];
+    this.pauseTexts = labels.map((l, i) => {
+      const t = this.add
+        .text(w / 2, py + 116 + i * 46, l, { fontFamily: FONT, fontSize: '23px', color: CREAM })
+        .setOrigin(0.5);
+      c.add(t);
+      return t;
+    });
+    c.add(
+      this.add
+        .text(w / 2, py + ph - 26, 'Esc to resume', { fontFamily: FONT, fontSize: '14px', color: INK_SOFT })
+        .setOrigin(0.5)
+    );
+
+    this.pauseBox = c;
+    this.renderPause();
+    this.tweens.add({ targets: c, alpha: 1, duration: 160 });
+  }
+
+  renderPause() {
+    const labels = ['Resume', 'Settings', 'Return to Title'];
+    this.pauseTexts.forEach((t, i) => {
+      const on = i === this.pauseState.sel;
+      t.setColor(on ? GOLD : CREAM);
+      t.setText(on ? `‹ ${labels[i]} ›` : labels[i]);
+    });
+  }
+
+  pauseMove(d) {
+    if (!this.isPauseActive()) return;
+    const n = this.pauseState.ids.length;
+    this.pauseState.sel = (this.pauseState.sel + d + n) % n;
+    this.renderPause();
+  }
+
+  pauseSelectedId() {
+    return this.isPauseActive() ? this.pauseState.ids[this.pauseState.sel] : null;
+  }
+
+  closePause() {
+    if (!this.isPauseActive()) return;
+    this.pauseState.active = false;
+    if (this.pauseBox) {
+      const box = this.pauseBox;
+      this.tweens.add({ targets: box, alpha: 0, duration: 140, onComplete: () => box.destroy() });
+      this.pauseBox = null;
+    }
   }
 
   // --- inventory / status bar (top) ---
