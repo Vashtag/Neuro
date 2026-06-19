@@ -14,7 +14,8 @@ const BUILDINGS = [
   { key: TEXTURE_KEYS.memoryArchive, tx: 17, ty: 26, tw: 5, th: 3, id: 'memoryArchive' },
   { key: TEXTURE_KEYS.hebbHut, tx: 5, ty: 30, tw: 4, th: 3, id: 'hebbHut' },
   { key: TEXTURE_KEYS.dreamAltar, tx: 17, ty: 12, tw: 5, th: 3, id: 'dreamAltar' },
-  { key: TEXTURE_KEYS.cortexLibrary, tx: 17, ty: 1, tw: 5, th: 3, id: 'cortexLibrary' }
+  { key: TEXTURE_KEYS.cortexLibrary, tx: 17, ty: 1, tw: 5, th: 3, id: 'cortexLibrary' },
+  { key: TEXTURE_KEYS.amygdala, tx: 30, ty: 46, tw: 5, th: 3, id: 'amygdala' }
 ];
 
 // MapManager: renders the hard-coded tile map, places building sprites, and
@@ -142,6 +143,16 @@ export default class MapManager {
       if (b.id === 'cortexLibrary') {
         this.cortexLibraryGlowSprite = this.scene.add
           .image(b.tx * T, b.ty * T, TEX_GEN_KEYS.cortexLibraryGlow)
+          .setOrigin(0, 0)
+          .setDepth((b.ty + b.th) * T + 1)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setAlpha(0);
+      }
+
+      // Amygdala glow overlay (driven by the Stage 4 goal).
+      if (b.id === 'amygdala') {
+        this.amygdalaGlowSprite = this.scene.add
+          .image(b.tx * T, b.ty * T, TEX_GEN_KEYS.amygdalaGlow)
           .setOrigin(0, 0)
           .setDepth((b.ty + b.th) * T + 1)
           .setBlendMode(Phaser.BlendModes.ADD)

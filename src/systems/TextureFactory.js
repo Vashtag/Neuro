@@ -23,7 +23,11 @@ export const GEN_KEYS = {
   // Cortex (Stage 3)
   iconKnowledgeSeed: 'icon_knowledgeseed',
   iconKnowledgeHerb: 'icon_knowledgeherb',
-  cortexLibraryGlow: 'building_cortex_library_glow'
+  cortexLibraryGlow: 'building_cortex_library_glow',
+  // Emotion / Amygdala (Stage 4)
+  iconEmotionSeed: 'icon_emotionseed',
+  iconEmotionFlower: 'icon_emotionflower',
+  amygdalaGlow: 'building_amygdala_glow'
 };
 
 const T = GAME_CONFIG.tileSize; // 32
@@ -422,6 +426,48 @@ function buildKnowledgeCrops(scene) {
 }
 
 // ---------------------------------------------------------------------------
+// EMOTION FLOWER crop stages (32x32) — vivid pink, bright bloom
+// ---------------------------------------------------------------------------
+function buildEmotionCrops(scene) {
+  make(scene, TEXTURE_KEYS.cropEmotionSeed, T, T, (g) => {
+    g.fillStyle(PALETTE.emotionCrop, 1);
+    g.fillCircle(16, 22, 3);
+    g.fillStyle(PALETTE.emotionCropReady, 0.9);
+    g.fillCircle(16, 21, 1);
+  });
+  make(scene, TEXTURE_KEYS.cropEmotionSprout, T, T, (g) => {
+    g.fillStyle(0x5a6a32, 1);
+    g.fillRect(15, 16, 2, 9);
+    g.fillStyle(PALETTE.emotionCrop, 1);
+    g.fillCircle(12, 16, 3);
+    g.fillCircle(20, 16, 3);
+  });
+  make(scene, TEXTURE_KEYS.cropEmotionBud, T, T, (g) => {
+    g.fillStyle(0x4f6030, 1);
+    g.fillRect(15, 13, 2, 12);
+    g.fillStyle(PALETTE.emotionCrop, 1);
+    g.fillCircle(11, 16, 3);
+    g.fillCircle(21, 16, 3);
+    g.fillStyle(PALETTE.emotionCropReady, 1);
+    g.fillCircle(16, 10, 4);
+  });
+  make(scene, TEXTURE_KEYS.cropEmotionReady, T, T, (g) => {
+    g.fillStyle(0x4f6030, 1);
+    g.fillRect(15, 14, 2, 11);
+    // bright bloom — petals around a glowing heart-pink centre
+    g.fillStyle(PALETTE.amygdalaGlow, 0.4);
+    g.fillCircle(16, 10, 10);
+    g.fillStyle(PALETTE.emotionCrop, 1);
+    [[10, 10], [22, 10], [13, 4], [19, 4], [16, 14]].forEach(([x, y]) => g.fillCircle(x, y, 4));
+    g.fillStyle(PALETTE.emotionCropReady, 1);
+    g.fillCircle(16, 9, 4);
+    g.fillStyle(PALETTE.sparkle, 0.9);
+    g.fillCircle(14, 7, 1);
+    g.fillCircle(19, 11, 1);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // BUILDINGS
 // ---------------------------------------------------------------------------
 function buildBuildings(scene) {
@@ -534,6 +580,33 @@ function buildBuildings(scene) {
     g.fillRoundedRect(18, 16, cw - 36, ch - 18, 6);
     g.fillStyle(0xfff4c4, 0.4);
     g.fillCircle(cw / 2, ch / 2, 30);
+  });
+
+  // Amygdala — Stage 4 goal: a heart-shaped shrine.
+  make(scene, TEXTURE_KEYS.amygdala, cw, ch, (g) => {
+    const cx = cw / 2;
+    const top = 18;
+    g.fillStyle(PALETTE.amygdalaDim, 1);
+    // two lobes + point = heart silhouette
+    g.fillCircle(cx - 22, top + 16, 22);
+    g.fillCircle(cx + 22, top + 16, 22);
+    g.fillTriangle(cx - 40, top + 24, cx + 40, top + 24, cx, ch - 6);
+    // inner chamber
+    g.fillStyle(0x52283a, 1);
+    g.fillCircle(cx - 14, top + 16, 12);
+    g.fillCircle(cx + 14, top + 16, 12);
+    g.fillTriangle(cx - 24, top + 22, cx + 24, top + 22, cx, ch - 18);
+  });
+
+  make(scene, GEN_KEYS.amygdalaGlow, cw, ch, (g) => {
+    const cx = cw / 2;
+    const top = 18;
+    g.fillStyle(PALETTE.amygdalaGlow, 0.9);
+    g.fillCircle(cx - 22, top + 16, 22);
+    g.fillCircle(cx + 22, top + 16, 22);
+    g.fillTriangle(cx - 40, top + 24, cx + 40, top + 24, cx, ch - 6);
+    g.fillStyle(0xfff4c4, 0.4);
+    g.fillCircle(cx, ch / 2, 26);
   });
 
   // Glow overlay (drawn on top, alpha controlled by ArchiveSystem).
@@ -693,6 +766,24 @@ function buildIcons(scene) {
     g.fillStyle(PALETTE.sparkle, 0.9);
     g.fillCircle(10, 7, 1);
   });
+
+  make(scene, GEN_KEYS.iconEmotionSeed, S, S, (g) => {
+    g.fillStyle(PALETTE.emotionCrop, 1);
+    g.fillEllipse(12, 13, 7, 10);
+    g.fillStyle(PALETTE.emotionCropReady, 0.9);
+    g.fillCircle(10, 10, 1.5);
+  });
+
+  make(scene, GEN_KEYS.iconEmotionFlower, S, S, (g) => {
+    g.fillStyle(PALETTE.amygdalaGlow, 0.35);
+    g.fillCircle(12, 11, 9);
+    g.fillStyle(PALETTE.emotionCrop, 1);
+    [[8, 11], [16, 11], [9, 6], [15, 6], [12, 15]].forEach(([x, y]) => g.fillCircle(x, y, 3.4));
+    g.fillStyle(PALETTE.emotionCropReady, 1);
+    g.fillCircle(12, 10, 3.2);
+    g.fillStyle(PALETTE.sparkle, 0.9);
+    g.fillCircle(10, 8, 1);
+  });
 }
 
 // Generate every placeholder texture that did not arrive as a real asset.
@@ -702,6 +793,7 @@ export function generatePlaceholderTextures(scene) {
   buildCrops(scene);
   buildDreamCrops(scene);
   buildKnowledgeCrops(scene);
+  buildEmotionCrops(scene);
   buildBuildings(scene);
   buildFxUi(scene);
   buildIcons(scene);

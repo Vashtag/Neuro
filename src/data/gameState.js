@@ -14,7 +14,9 @@ export function createDefaultGameState() {
       dreamSeeds: 0,
       dreamBlooms: 0,
       knowledgeSeeds: 0,
-      knowledgeHerbs: 0
+      knowledgeHerbs: 0,
+      emotionSeeds: 0,
+      emotionFlowers: 0
     },
     archive: {
       memoryBerriesArchived: 0,
@@ -29,6 +31,11 @@ export function createDefaultGameState() {
     cortex: {
       knowledgeHerbsStored: 0,
       requiredKnowledgeHerbs: 3,
+      complete: false
+    },
+    amygdala: {
+      emotionFlowersOffered: 0,
+      requiredEmotionFlowers: 3,
       complete: false
     },
     codex: {
@@ -54,7 +61,11 @@ export function createDefaultGameState() {
       reachedCortex: false,
       receivedKnowledgeSeeds: false,
       harvestedFirstKnowledge: false,
-      storedFirstKnowledge: false
+      storedFirstKnowledge: false,
+      // Stage 4
+      receivedEmotionSeeds: false,
+      harvestedFirstEmotion: false,
+      offeredFirstEmotion: false
     },
     fieldNotesStep: 'talk_to_hebb',
     // Each entry: { x, y, soilState, wateredToday, crop }
@@ -97,4 +108,8 @@ export function carryingDreamBlooms(state) {
 
 export function carryingKnowledgeHerbs(state) {
   return state.inventory.knowledgeHerbs > 0;
+}
+
+export function carryingEmotionFlowers(state) {
+  return state.inventory.emotionFlowers > 0;
 }

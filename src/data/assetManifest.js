@@ -51,6 +51,12 @@ export const TEXTURE_KEYS = {
   cropKnowledgeSprout: 'crop_knowledge_herb_1',
   cropKnowledgeBud: 'crop_knowledge_herb_2',
   cropKnowledgeReady: 'crop_knowledge_herb_3',
+  // Emotion / Amygdala (Stage 4)
+  amygdala: 'building_amygdala',
+  cropEmotionSeed: 'crop_emotion_flower_0',
+  cropEmotionSprout: 'crop_emotion_flower_1',
+  cropEmotionBud: 'crop_emotion_flower_2',
+  cropEmotionReady: 'crop_emotion_flower_3',
   // ui / fx
   promptE: 'ui_prompt_e',
   sparkle: 'fx_sparkle',

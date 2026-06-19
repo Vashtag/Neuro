@@ -72,6 +72,28 @@ export const CROPS = {
       noSeeds: 'No Knowledge Seeds. Try the Knowledge Cache in the Cortex.',
       decayed: 'Skipped review — the fact slips a little. Water it again to keep it.'
     }
+  },
+
+  emotion_flower: {
+    name: 'Emotion Flower',
+    seedItem: 'emotionSeeds',
+    harvestItem: 'emotionFlowers',
+    // Emotional memory: vivid and fast. Charged moments are recorded in a single
+    // night (flashbulb memory) and never fade.
+    wateredNightsRequired: 1,
+    stageTextures: [
+      'crop_emotion_flower_0',
+      'crop_emotion_flower_1',
+      'crop_emotion_flower_2',
+      'crop_emotion_flower_3'
+    ],
+    plantSlot: 'emotionSeed',
+    harvestSlot: 'emotionFlower',
+    messages: {
+      plant: 'A vivid feeling takes root — these bloom fast and bright.',
+      harvest: 'Retrieved: one Emotion Flower.',
+      noSeeds: 'No Emotion Seeds. Look for the cache near the Dream Pond.'
+    }
   }
 };
 

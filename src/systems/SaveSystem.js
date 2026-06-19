@@ -57,6 +57,7 @@ function sanitize(loaded) {
   out.archive = { ...def.archive, ...(loaded.archive || {}) };
   out.grove = { ...def.grove, ...(loaded.grove || {}) };
   out.cortex = { ...def.cortex, ...(loaded.cortex || {}) };
+  out.amygdala = { ...def.amygdala, ...(loaded.amygdala || {}) };
   out.codex = { ...def.codex, ...(loaded.codex || {}) };
   out.tutorial = { ...def.tutorial, ...(loaded.tutorial || {}) };
   out.player = { ...def.player, ...(loaded.player || {}) };
