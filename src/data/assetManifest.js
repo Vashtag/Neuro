@@ -42,6 +42,15 @@ export const TEXTURE_KEYS = {
   cropDreamSprout: 'crop_dream_bloom_1',
   cropDreamBud: 'crop_dream_bloom_2',
   cropDreamReady: 'crop_dream_bloom_3',
+  // Cortex (Stage 3)
+  cortexGround: 'tile_cortex_ground',
+  cortexColumn: 'decor_cortex_column',
+  axonGate: 'tile_axon_gate',
+  cortexLibrary: 'building_cortex_library',
+  cropKnowledgeSeed: 'crop_knowledge_herb_0',
+  cropKnowledgeSprout: 'crop_knowledge_herb_1',
+  cropKnowledgeBud: 'crop_knowledge_herb_2',
+  cropKnowledgeReady: 'crop_knowledge_herb_3',
   // ui / fx
   promptE: 'ui_prompt_e',
   sparkle: 'fx_sparkle',

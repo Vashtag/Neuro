@@ -22,30 +22,32 @@ export default class FarmingSystem {
   }
 
   init() {
-    // First run: populate crop tiles from the farmable map tiles, tagging each
-    // with the crop type declared by its tile.
-    if (!this.state.crops || this.state.crops.length === 0) {
-      const tiles = [];
-      for (let y = 0; y < this.map.grid.length; y += 1) {
-        for (let x = 0; x < this.map.grid[y].length; x += 1) {
-          if (this.map.isFarmable(x, y)) {
-            tiles.push({
-              x,
-              y,
-              cropType: this.tileCropType(x, y),
-              soilState: 'untilled',
-              wateredToday: false,
-              crop: null
-            });
-          }
+    // Reconcile saved crop entries against the current farmable tiles. This
+    // keeps in-progress crops across reloads, adds plots from newly-opened
+    // regions, and drops any entry whose tile is no longer farmable (e.g. after
+    // a map change). Robust to coordinate shifts between builds.
+    const saved = new Map((this.state.crops || []).map((e) => [this.key(e.x, e.y), e]));
+    const tiles = [];
+    for (let y = 0; y < this.map.grid.length; y += 1) {
+      for (let x = 0; x < this.map.grid[y].length; x += 1) {
+        if (!this.map.isFarmable(x, y)) continue;
+        const prev = saved.get(this.key(x, y));
+        if (prev) {
+          if (!prev.cropType) prev.cropType = this.tileCropType(x, y);
+          tiles.push(prev);
+        } else {
+          tiles.push({
+            x,
+            y,
+            cropType: this.tileCropType(x, y),
+            soilState: 'untilled',
+            wateredToday: false,
+            crop: null
+          });
         }
       }
-      this.state.crops = tiles;
     }
-    // Backfill cropType for older saves that predate multi-crop support.
-    this.state.crops.forEach((entry) => {
-      if (!entry.cropType) entry.cropType = this.tileCropType(entry.x, entry.y);
-    });
+    this.state.crops = tiles;
     this.state.crops.forEach((entry) => this.renderEntry(entry));
   }
 
@@ -172,6 +174,7 @@ export default class FarmingSystem {
       entry.wateredToday = false;
       if (isMemory) this.state.tutorial.harvestedFirstBerry = true;
       else if (entry.cropType === 'dream_bloom') this.state.tutorial.harvestedFirstDream = true;
+      else if (entry.cropType === 'knowledge_herb') this.state.tutorial.harvestedFirstKnowledge = true;
       this.renderEntry(entry);
       this.spawnHarvestFx(entry);
       ui.showMessage(def.messages.harvest);
@@ -203,12 +206,17 @@ export default class FarmingSystem {
   growOvernight() {
     let grew = false;
     this.state.crops.forEach((entry) => {
-      if (entry.crop && entry.wateredToday && !entry.crop.ready) {
-        const required = (CROPS[entry.crop.type] || CROPS[DEFAULT_CROP_TYPE]).wateredNightsRequired;
+      if (!entry.crop || entry.crop.ready) return;
+      const def = CROPS[entry.crop.type] || CROPS[DEFAULT_CROP_TYPE];
+      if (entry.wateredToday) {
         entry.crop.wateredNights += 1;
-        if (entry.crop.wateredNights >= required) {
+        if (entry.crop.wateredNights >= def.wateredNightsRequired) {
           entry.crop.ready = true;
         }
+        grew = true;
+      } else if (def.decays && entry.crop.wateredNights > 0) {
+        // Spaced repetition: an un-reviewed fact slips back a step.
+        entry.crop.wateredNights -= 1;
         grew = true;
       }
     });

@@ -86,9 +86,13 @@ export default class UIScene extends Phaser.Scene {
     addSlot('archiveSatchel', x, GEN_KEYS.iconSatchel, false); x += gap;
     // Dream items (Stage 2) — hidden until unlocked.
     addSlot('dreamSeed', x, GEN_KEYS.iconDreamSeed, true); x += gap;
-    addSlot('dreamBloom', x, GEN_KEYS.iconDreamBloom, true); x += gap + 8;
-    this.setSlotVisible('dreamSeed', false);
-    this.setSlotVisible('dreamBloom', false);
+    addSlot('dreamBloom', x, GEN_KEYS.iconDreamBloom, true); x += gap;
+    // Knowledge items (Stage 3) — hidden until unlocked.
+    addSlot('knowledgeSeed', x, GEN_KEYS.iconKnowledgeSeed, true); x += gap;
+    addSlot('knowledgeHerb', x, GEN_KEYS.iconKnowledgeHerb, true); x += gap + 8;
+    ['dreamSeed', 'dreamBloom', 'knowledgeSeed', 'knowledgeHerb'].forEach((id) =>
+      this.setSlotVisible(id, false)
+    );
 
     this.archiveText = this.add
       .text(x, cy, 'Archive 0/5', { fontFamily: FONT, fontSize: '16px', color: CREAM })
@@ -137,6 +141,18 @@ export default class UIScene extends Phaser.Scene {
       this.invSlots.dreamSeed.icon.setAlpha(inv.dreamSeeds > 0 ? 1 : 0.4);
       this.invSlots.dreamBloom.count.setText(`${inv.dreamBlooms}`);
       this.invSlots.dreamBloom.icon.setAlpha(inv.dreamBlooms > 0 ? 1 : 0.4);
+    }
+
+    // Knowledge items appear once unlocked (Stage 3).
+    const knowledgeUnlocked =
+      state.tutorial.receivedKnowledgeSeeds || inv.knowledgeSeeds > 0 || inv.knowledgeHerbs > 0;
+    this.setSlotVisible('knowledgeSeed', knowledgeUnlocked);
+    this.setSlotVisible('knowledgeHerb', knowledgeUnlocked);
+    if (knowledgeUnlocked) {
+      this.invSlots.knowledgeSeed.count.setText(`${inv.knowledgeSeeds}`);
+      this.invSlots.knowledgeSeed.icon.setAlpha(inv.knowledgeSeeds > 0 ? 1 : 0.4);
+      this.invSlots.knowledgeHerb.count.setText(`${inv.knowledgeHerbs}`);
+      this.invSlots.knowledgeHerb.icon.setAlpha(inv.knowledgeHerbs > 0 ? 1 : 0.4);
     }
 
     this.archiveText.setText(
@@ -203,7 +219,8 @@ export default class UIScene extends Phaser.Scene {
     const note = FIELD_NOTES[state.fieldNotesStep] || FIELD_NOTES.talk_to_hebb;
     const body = note.body
       .replace('{n}', state.archive.memoryBerriesArchived)
-      .replace('{d}', state.grove ? state.grove.dreamBloomsOffered : 0);
+      .replace('{d}', state.grove ? state.grove.dreamBloomsOffered : 0)
+      .replace('{k}', state.cortex ? state.cortex.knowledgeHerbsStored : 0);
     this.fieldNotesTitle.setText(note.title);
     this.fieldNotesBody.setText(body);
   }
@@ -448,14 +465,14 @@ export default class UIScene extends Phaser.Scene {
     c.add(title);
     c.add(sub);
 
-    // 2 columns x 3 rows of entry cards.
+    // 2 columns x N rows of entry cards (sized to fit the panel).
     const cols = 2;
     const cardW = 412;
-    const cardH = 152;
+    const cardH = 110;
     const gapX = 20;
-    const gapY = 16;
+    const gapY = 10;
     const gridX = px + 28;
-    const gridY = py + 66;
+    const gridY = py + 60;
 
     CODEX_ENTRIES.forEach((entry, i) => {
       const col = i % cols;
@@ -472,9 +489,9 @@ export default class UIScene extends Phaser.Scene {
       c.add(card);
 
       // Icon box
-      const boxX = cx + 16;
-      const boxY = cy + 16;
-      const boxS = 56;
+      const boxX = cx + 14;
+      const boxY = cy + 14;
+      const boxS = 46;
       const ibox = this.add.graphics();
       ibox.fillStyle(0x1c1730, 1);
       ibox.fillRoundedRect(boxX, boxY, boxS, boxS, 8);
@@ -482,23 +499,23 @@ export default class UIScene extends Phaser.Scene {
 
       if (found) {
         const icon = this.add.image(boxX + boxS / 2, boxY + boxS / 2, entry.icon).setOrigin(0.5);
-        const scale = Math.min((boxS - 12) / icon.width, (boxS - 12) / icon.height);
+        const scale = Math.min((boxS - 10) / icon.width, (boxS - 10) / icon.height);
         icon.setScale(scale);
         c.add(icon);
 
         const name = this.add
-          .text(cx + 86, cy + 18, entry.title, { fontFamily: FONT, fontSize: '19px', color: CREAM, fontStyle: 'bold' })
+          .text(cx + 72, cy + 13, entry.title, { fontFamily: FONT, fontSize: '17px', color: CREAM, fontStyle: 'bold' })
           .setOrigin(0, 0);
         const concept = this.add
-          .text(cx + 86, cy + 42, entry.concept, { fontFamily: FONT, fontSize: '14px', color: GOLD, fontStyle: 'italic' })
+          .text(cx + 72, cy + 34, entry.concept, { fontFamily: FONT, fontSize: '13px', color: GOLD, fontStyle: 'italic' })
           .setOrigin(0, 0);
         const body = this.add
-          .text(cx + 16, cy + 80, entry.body, {
+          .text(cx + 14, cy + 56, entry.body, {
             fontFamily: FONT,
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#d8cdbd',
-            lineSpacing: 3,
-            wordWrap: { width: cardW - 32 }
+            lineSpacing: 2,
+            wordWrap: { width: cardW - 28 }
           })
           .setOrigin(0, 0);
         c.add(name);
@@ -506,17 +523,17 @@ export default class UIScene extends Phaser.Scene {
         c.add(body);
       } else {
         const q = this.add
-          .text(boxX + boxS / 2, boxY + boxS / 2, '?', { fontFamily: FONT, fontSize: '30px', color: '#5a4f7a', fontStyle: 'bold' })
+          .text(boxX + boxS / 2, boxY + boxS / 2, '?', { fontFamily: FONT, fontSize: '26px', color: '#5a4f7a', fontStyle: 'bold' })
           .setOrigin(0.5);
         const name = this.add
-          .text(cx + 86, cy + 26, 'Undiscovered', { fontFamily: FONT, fontSize: '18px', color: '#6a5f8a', fontStyle: 'bold' })
+          .text(cx + 72, cy + 20, 'Undiscovered', { fontFamily: FONT, fontSize: '17px', color: '#6a5f8a', fontStyle: 'bold' })
           .setOrigin(0, 0);
         const body = this.add
-          .text(cx + 16, cy + 80, 'Keep exploring Neurobloom to reveal this entry.', {
+          .text(cx + 14, cy + 56, 'Keep exploring Neurobloom to reveal this entry.', {
             fontFamily: FONT,
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#5a5078',
-            wordWrap: { width: cardW - 32 }
+            wordWrap: { width: cardW - 28 }
           })
           .setOrigin(0, 0);
         c.add(q);

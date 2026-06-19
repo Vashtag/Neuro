@@ -64,6 +64,26 @@ export const CODEX_ENTRIES = [
       'Synapses are the tiny gaps where neurons pass signals. Stronger, busier synapses are ' +
       'the physical basis of a well-learned memory.',
     discovered: (s) => s.tutorial.reachedTeaserPath
+  },
+  {
+    id: 'knowledge_herb',
+    title: 'Knowledge Herb',
+    concept: 'Semantic Memory',
+    icon: GEN_KEYS.iconKnowledgeHerb,
+    body:
+      'Semantic memory holds facts and concepts, separate from when you learned them. It ' +
+      'stays strong through spaced repetition — review regularly, or it fades.',
+    discovered: (s) => s.tutorial.harvestedFirstKnowledge
+  },
+  {
+    id: 'cortex',
+    title: 'The Cortex',
+    concept: 'Long-term Knowledge',
+    icon: TEXTURE_KEYS.cortexColumn,
+    body:
+      'The cortex stores well-learned knowledge for the long term, organised in repeating ' +
+      'columns of neurons. The hippocampus trains it through repeated replay.',
+    discovered: (s) => s.tutorial.reachedCortex
   }
 ];
 

@@ -48,6 +48,30 @@ export const CROPS = {
       harvest: 'Retrieved: one Dream Bloom.',
       noSeeds: 'No Dream Seeds. Dr. Hebb keeps them for after the fog lifts.'
     }
+  },
+
+  knowledge_herb: {
+    name: 'Knowledge Herb',
+    seedItem: 'knowledgeSeeds',
+    harvestItem: 'knowledgeHerbs',
+    wateredNightsRequired: 3,
+    // Semantic memory: facts hold only with consistent review. Skip a night's
+    // watering and the herb loses a step (spaced repetition with forgetting).
+    decays: true,
+    stageTextures: [
+      'crop_knowledge_herb_0',
+      'crop_knowledge_herb_1',
+      'crop_knowledge_herb_2',
+      'crop_knowledge_herb_3'
+    ],
+    plantSlot: 'knowledgeSeed',
+    harvestSlot: 'knowledgeHerb',
+    messages: {
+      plant: 'A fact takes root. Knowledge holds only with steady review.',
+      harvest: 'Retrieved: one Knowledge Herb.',
+      noSeeds: 'No Knowledge Seeds. Try the Knowledge Cache in the Cortex.',
+      decayed: 'Skipped review — the fact slips a little. Water it again to keep it.'
+    }
   }
 };
 

@@ -10,6 +10,7 @@ import {
   carryingBerries,
   hasReadyCrop,
   carryingDreamBlooms,
+  carryingKnowledgeHerbs,
   hasReadyCropOfType
 } from '../data/gameState.js';
 import { selectHebbStage } from '../data/dialogueData.js';
@@ -18,7 +19,12 @@ import DaySystem from '../systems/DaySystem.js';
 import ArchiveSystem from '../systems/ArchiveSystem.js';
 import SoundManager from '../systems/SoundManager.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
-import { ACTION_MESSAGES, GROVE_COMPLETION_TEXT, DREAM_MESSAGES } from '../data/dialogueData.js';
+import {
+  ACTION_MESSAGES,
+  DREAM_MESSAGES,
+  KNOWLEDGE_MESSAGES,
+  CORTEX_COMPLETION_TEXT
+} from '../data/dialogueData.js';
 import { TEXTURE_KEYS } from '../data/assetManifest.js';
 import { CODEX_ENTRIES } from '../data/codexData.js';
 
@@ -47,6 +53,10 @@ export default class GameScene extends Phaser.Scene {
     // --- Map ---
     this.map = new MapManager(this).create();
 
+    // Restore opened gates when loading a save past those milestones.
+    if (this.state.archive.fogCleared) this.map.clearFog();
+    if (this.state.grove.restored) this.map.clearAxonGate();
+
     // --- Player ---
     const start = this.map.tileToWorldCenter(PLAYER_START_TILE.x, PLAYER_START_TILE.y);
     this.player = new Player(this, start.x, start.y);
@@ -72,8 +82,9 @@ export default class GameScene extends Phaser.Scene {
     // --- Archive ---
     this.archive = new ArchiveSystem(this);
 
-    // Restore the Dream Altar glow if loading mid Stage 2.
+    // Restore the Dream Altar / Cortex Library glow if loading mid Stage 2-3.
     this.updateAltarVisual(true);
+    this.updateLibraryVisual(true);
 
     // --- UI reference + interaction ---
     this.ui = this.scene.get(SCENES.UI);
@@ -131,6 +142,8 @@ export default class GameScene extends Phaser.Scene {
       onNpc: () => this.talkToHebb(),
       onArchive: () => this.archive.deposit(),
       onDreamAltar: () => this.onDreamAltar(),
+      onCortexLibrary: () => this.onCortexLibrary(),
+      onKnowledgeCache: () => this.onKnowledgeCache(),
       onSleep: () => this.daySystem.promptSleep(),
       onSign: (zone) => msg(zone.message || 'A weathered sign.', 3200),
       onFarm: (tile) => this.farming.doAction(tile),
@@ -175,7 +188,7 @@ export default class GameScene extends Phaser.Scene {
   checkTeaserReached() {
     if (!this.state.archive.fogCleared || this.state.tutorial.reachedTeaserPath) return;
     const tile = this.map.worldToTile(this.player.x, this.player.y);
-    if (tile.y <= 12) {
+    if (tile.y <= 22) {
       this.state.tutorial.reachedTeaserPath = true;
       this.updateFieldNotes(); // -> explore_grove
       this.sfx('fogClear');
@@ -236,10 +249,20 @@ export default class GameScene extends Phaser.Scene {
   deriveGroveStep(s) {
     if (!s.tutorial.reachedTeaserPath) return 'explore_path';
     if (!s.tutorial.receivedDreamSeeds) return 'explore_grove';
-    if (s.grove.restored) return 'complete';
+    if (s.grove.restored) return this.deriveCortexStep(s);
     if (carryingDreamBlooms(s)) return 'offer_dreams';
     if (hasReadyCropOfType(s, 'dream_bloom')) return 'harvest_dreams';
     return 'grow_dreams';
+  }
+
+  // Stage 3 objective progression (Cortex).
+  deriveCortexStep(s) {
+    if (s.cortex.complete) return 'complete';
+    if (!s.tutorial.reachedCortex) return 'cross_bridge';
+    if (!s.tutorial.receivedKnowledgeSeeds) return 'find_cache';
+    if (carryingKnowledgeHerbs(s)) return 'store_knowledge';
+    if (hasReadyCropOfType(s, 'knowledge_herb')) return 'harvest_knowledge';
+    return 'grow_knowledge';
   }
 
   // Offer carried Dream Blooms to the Dream Altar (Stage 2 goal).
@@ -282,15 +305,96 @@ export default class GameScene extends Phaser.Scene {
     else this.tweens.add({ targets: glow, alpha: ratio, duration: 700, ease: 'Sine.easeInOut' });
   }
 
-  // Stage 2 finale: the grove is restored.
+  // Stage 2 -> 3 transition: restoring the grove opens the axon bridge north.
   handleGroveComplete() {
     this.sfx('fogClear');
-    this.updateFieldNotes(); // -> complete
+    this.state.tutorial.axonBridgeOpened = true;
     this.ui.showMessage(DREAM_MESSAGES.restored, 2600);
+    this.map.clearAxonGate(() => {
+      this.ui.showMessage('The axon bridge opens. The Cortex waits to the north.', 3000);
+    });
+    this.updateFieldNotes(); // -> cross_bridge
+  }
+
+  // --- Stage 3: Cortex ---
+
+  // Knowledge Cache: hands the player Knowledge Seeds (once).
+  onKnowledgeCache() {
+    if (this.state.tutorial.receivedKnowledgeSeeds) {
+      this.ui.showMessage(KNOWLEDGE_MESSAGES.cacheEmpty);
+      this.sfx('unavailable');
+      return;
+    }
+    this.state.inventory.knowledgeSeeds = 5;
+    this.state.tutorial.receivedKnowledgeSeeds = true;
+    this.sfx('plant');
+    this.syncUI(['knowledgeSeed']);
+    this.updateFieldNotes();
+    this.ui.showMessage(KNOWLEDGE_MESSAGES.cache, 3200);
+  }
+
+  // Cortex Library: store carried Knowledge Herbs (Stage 3 goal).
+  onCortexLibrary() {
+    const cortex = this.state.cortex;
+    const inv = this.state.inventory;
+    const carried = inv.knowledgeHerbs;
+
+    if (carried <= 0) {
+      this.ui.showMessage(KNOWLEDGE_MESSAGES.storeWaiting);
+      this.sfx('unavailable');
+      return;
+    }
+
+    inv.knowledgeHerbs = 0;
+    cortex.knowledgeHerbsStored = Math.min(
+      cortex.knowledgeHerbsStored + carried,
+      cortex.requiredKnowledgeHerbs
+    );
+    this.state.tutorial.storedFirstKnowledge = true;
+
+    this.sfx('archive');
+    this.updateLibraryVisual();
+    this.syncUI(['knowledgeHerb']);
+    this.updateFieldNotes();
+
+    const n = cortex.knowledgeHerbsStored;
+    this.ui.showMessage(`${KNOWLEDGE_MESSAGES.store(carried)} (${n}/${cortex.requiredKnowledgeHerbs})`, 2600);
+
+    if (n >= cortex.requiredKnowledgeHerbs && !cortex.complete) {
+      cortex.complete = true;
+      this.time.delayedCall(900, () => this.handleCortexComplete());
+    }
+  }
+
+  updateLibraryVisual(instant = false) {
+    const glow = this.map.cortexLibraryGlowSprite;
+    if (!glow) return;
+    const c = this.state.cortex;
+    const ratio = c.knowledgeHerbsStored / c.requiredKnowledgeHerbs;
+    if (instant) glow.setAlpha(ratio);
+    else this.tweens.add({ targets: glow, alpha: ratio, duration: 700, ease: 'Sine.easeInOut' });
+  }
+
+  // Stage 3 finale.
+  handleCortexComplete() {
+    this.sfx('fogClear');
+    this.updateFieldNotes(); // -> complete
+    this.ui.showMessage(KNOWLEDGE_MESSAGES.complete, 2600);
     this.player.setInputLocked(true);
     this.time.delayedCall(1200, () => {
-      this.ui.showCompletion(GROVE_COMPLETION_TEXT.title, GROVE_COMPLETION_TEXT.body);
+      this.ui.showCompletion(CORTEX_COMPLETION_TEXT.title, CORTEX_COMPLETION_TEXT.body);
     });
+  }
+
+  // Fires once when the player first steps into the Cortex.
+  checkCortexReached() {
+    if (!this.state.grove.restored || this.state.tutorial.reachedCortex) return;
+    const tile = this.map.worldToTile(this.player.x, this.player.y);
+    if (tile.y <= 9) {
+      this.state.tutorial.reachedCortex = true;
+      this.updateFieldNotes(); // -> find_cache
+      this.ui.showMessage('The Cortex. Facts grow here — loud, stubborn, and easily forgotten.', 3000);
+    }
   }
 
   // --- Dr. Hebb dialogue ---
@@ -430,6 +534,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.interaction.update();
     this.checkTeaserReached();
+    this.checkCortexReached();
 
     if (
       Phaser.Input.Keyboard.JustDown(this.interactKeys[0]) ||
