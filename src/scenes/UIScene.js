@@ -28,6 +28,7 @@ export default class UIScene extends Phaser.Scene {
     this.buildDialogue();
     this.buildConfirm();
     this.buildControlsHint();
+    this.buildMinimap();
 
     // Populate from the (already created) GameScene state.
     const gs = this.scene.get(SCENES.GAME);
@@ -521,6 +522,115 @@ export default class UIScene extends Phaser.Scene {
     this.tweens.killTweensOf(this.savedText);
     this.savedText.setAlpha(1).setVisible(true);
     this.tweens.add({ targets: this.savedText, alpha: 0, delay: 1000, duration: 600 });
+  }
+
+  // --- minimap (bottom-right) ---
+  buildMinimap() {
+    const { canvasWidth: w, canvasHeight: h } = GAME_CONFIG;
+    this.gs = this.scene.get(SCENES.GAME);
+    if (!this.gs || !this.gs.map) return;
+
+    const cell = 3;
+    const cols = this.gs.map.grid[0].length;
+    const rows = this.gs.map.grid.length;
+    const pad = 4;
+    const mw = cols * cell;
+    const mh = rows * cell;
+    const boxW = mw + pad * 2;
+    const boxH = mh + pad * 2;
+    const px = w - boxW - 14;
+    const py = h - boxH - 14;
+
+    this.mini = { cell, cols, rows, x: px + pad, y: py + pad, revealKey: '' };
+
+    const c = this.add.container(0, 0).setDepth(880);
+    const panel = this.add.graphics();
+    panel.fillStyle(PALETTE.uiPanel, 0.9);
+    panel.fillRoundedRect(px, py, boxW, boxH, 6);
+    panel.lineStyle(2, PALETTE.uiPanelEdge, 1);
+    panel.strokeRoundedRect(px, py, boxW, boxH, 6);
+    c.add(panel);
+
+    this.miniTerrain = this.add.graphics();
+    c.add(this.miniTerrain);
+    this.miniDot = this.add.graphics();
+    c.add(this.miniDot);
+    this.minimapBox = c;
+
+    this.drawMinimapTerrain();
+  }
+
+  // Per-tile colours for the minimap.
+  minimapColor(ch) {
+    const C = {
+      '.': 0x3a3450,
+      _: 0x423a5a,
+      ',': 0x5a4a72,
+      S: 0x6b4a2a,
+      B: 0x5a4a8c,
+      K: 0x6a6a3a,
+      W: 0x3a4a8c,
+      C: 0xd08a6a,
+      A: 0x6a8ad0,
+      H: 0x6ab07a,
+      R: 0xb48ae6,
+      L: 0xe6c878,
+      F: 0x6a6a78,
+      T: 0x7a5a9a,
+      D: 0x8a7a5a,
+      g: 0x35707a,
+      P: 0x4a4a8c,
+      Y: 0x336b54,
+      O: 0x6a5c42,
+      k: 0x5a4a32,
+      X: 0x6a5ad0
+    };
+    return C[ch];
+  }
+
+  drawMinimapTerrain() {
+    if (!this.mini) return;
+    const g = this.miniTerrain;
+    const { cell, x: ox, y: oy } = this.mini;
+    const grid = this.gs.map.grid;
+    const st = this.gs.state;
+    const fog = st.archive.fogCleared;
+    const restored = st.grove.restored;
+    g.clear();
+    for (let y = 0; y < grid.length; y += 1) {
+      for (let x = 0; x < grid[y].length; x += 1) {
+        const ch = grid[y][x];
+        if (ch === '#') continue;
+        // Region fog-of-war: hide locked regions until reached.
+        let col;
+        if (y <= 10 && !restored) col = 0x241d36; // Cortex locked
+        else if (y >= 11 && y <= 20 && !fog) col = 0x241d36; // Grove locked
+        else col = this.minimapColor(ch) ?? 0x3a3450;
+        g.fillStyle(col, 1);
+        g.fillRect(ox + x * cell, oy + y * cell, cell, cell);
+      }
+    }
+    this.mini.revealKey = `${fog}|${restored}`;
+  }
+
+  updateMinimap() {
+    if (!this.mini || !this.gs || !this.gs.player) return;
+    const st = this.gs.state;
+    const key = `${st.archive.fogCleared}|${st.grove.restored}`;
+    if (key !== this.mini.revealKey) this.drawMinimapTerrain();
+
+    const T = GAME_CONFIG.tileSize;
+    const { cell, x: ox, y: oy, cols, rows } = this.mini;
+    const tx = Phaser.Math.Clamp(Math.floor(this.gs.player.x / T), 0, cols - 1);
+    const ty = Phaser.Math.Clamp(Math.floor(this.gs.player.y / T), 0, rows - 1);
+    const cx = ox + tx * cell + cell / 2;
+    const cy = oy + ty * cell + cell / 2;
+    const g = this.miniDot;
+    g.clear();
+    g.fillStyle(0x1a1430, 1);
+    g.fillCircle(cx, cy, 4);
+    g.fillStyle(0xfff1b8, 1);
+    g.fillCircle(cx, cy, 2.6);
   }
 
   // Small persistent controls hint, bottom-left.

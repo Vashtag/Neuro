@@ -641,6 +641,7 @@ export default class GameScene extends Phaser.Scene {
       this.interaction.interact();
     }
 
+    this.ui.updateMinimap?.();
     this.updateProbe(this.probeSnapshot());
   }
 
