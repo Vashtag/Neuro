@@ -17,10 +17,12 @@ export const TILE = {
   SOIL: 'S',
   DREAM_SOIL: 'B',
   KNOWLEDGE_SOIL: 'K',
+  EMOTION_SOIL: 'E',
   WATER: 'W',
   COTTAGE: 'C',
   ARCHIVE: 'A',
   HUT: 'H',
+  AMYGDALA: 'Z',
   FOG: 'F',
   TEASER: 'T',
   DECOR: 'D',
@@ -45,7 +47,9 @@ export const TILE_TYPES = {
   'S': { key: 'soil', walkable: true, farmable: true, crop: 'memory_berry' },
   'B': { key: 'soil', walkable: true, farmable: true, crop: 'dream_bloom' },
   'K': { key: 'soil', walkable: true, farmable: true, crop: 'knowledge_herb' },
+  'E': { key: 'soil', walkable: true, farmable: true, crop: 'emotion_flower' },
   'W': { key: 'water', walkable: false },
+  'Z': { key: 'amygdala', walkable: false, building: true },
   'C': { key: 'somaCottage', walkable: false, building: true },
   'A': { key: 'memoryArchive', walkable: false, building: true },
   'H': { key: 'hebbHut', walkable: false, building: true },
@@ -98,11 +102,11 @@ export const MAP_DATA = [
   '#....HHHH....................WWWWW.....#', // 31
   '#....HHHH....................WWWWW.....#', // 32
   '#.......D.D............................#', // 33
-  '#................SSSSS.................#', // 34 memory farm
-  '#................SSSSS.................#', // 35
-  '#................SSSSS.................#', // 36
-  '#................SSSSS.................#', // 37
-  '#................SSSSS.................#', // 38
+  '#................SSSSS........EEEE.....#', // 34 memory + emotion plots
+  '#................SSSSS........EEEE.D...#', // 35 emotion cache (D)
+  '#................SSSSS........EEEE.....#', // 36
+  '#................SSSSS........EEEE.....#', // 37
+  '#................SSSSS.................#', // 38 memory farm
   '#......................................#', // 39
   '#.......................D..............#', // 40
   '#...............CCCCC..................#', // 41 soma cottage
@@ -110,9 +114,9 @@ export const MAP_DATA = [
   '#...............CCCCC..................#', // 43
   '#......................................#', // 44
   '#......................................#', // 45 player start
-  '#......................................#', // 46
-  '#......................................#', // 47
-  '#......................................#', // 48
+  '#.............................ZZZZZ....#', // 46 amygdala shrine
+  '#.............................ZZZZZ....#', // 47
+  '#.............................ZZZZZ....#', // 48
   '########################################'  // 49
 ];
 
@@ -166,6 +170,24 @@ export const INTERACTABLES = [
     width: 1,
     height: 1,
     label: 'Knowledge Cache'
+  },
+  {
+    id: 'amygdala',
+    type: 'amygdala',
+    x: 30,
+    y: 46,
+    width: 5,
+    height: 3,
+    label: 'Amygdala'
+  },
+  {
+    id: 'emotion_cache',
+    type: 'emotion_cache',
+    x: 35,
+    y: 35,
+    width: 1,
+    height: 1,
+    label: 'Emotion Cache'
   },
   // Future-crop tease signs (D tiles).
   {

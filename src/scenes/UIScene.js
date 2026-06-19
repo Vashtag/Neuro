@@ -188,9 +188,12 @@ export default class UIScene extends Phaser.Scene {
     addSlot('dreamBloom', x, GEN_KEYS.iconDreamBloom, true); x += gap;
     // Knowledge items (Stage 3) — hidden until unlocked.
     addSlot('knowledgeSeed', x, GEN_KEYS.iconKnowledgeSeed, true); x += gap;
-    addSlot('knowledgeHerb', x, GEN_KEYS.iconKnowledgeHerb, true); x += gap + 8;
-    ['dreamSeed', 'dreamBloom', 'knowledgeSeed', 'knowledgeHerb'].forEach((id) =>
-      this.setSlotVisible(id, false)
+    addSlot('knowledgeHerb', x, GEN_KEYS.iconKnowledgeHerb, true); x += gap;
+    // Emotion items (Stage 4) — hidden until unlocked.
+    addSlot('emotionSeed', x, GEN_KEYS.iconEmotionSeed, true); x += gap;
+    addSlot('emotionFlower', x, GEN_KEYS.iconEmotionFlower, true); x += gap + 8;
+    ['dreamSeed', 'dreamBloom', 'knowledgeSeed', 'knowledgeHerb', 'emotionSeed', 'emotionFlower'].forEach(
+      (id) => this.setSlotVisible(id, false)
     );
 
     this.archiveText = this.add
@@ -252,6 +255,18 @@ export default class UIScene extends Phaser.Scene {
       this.invSlots.knowledgeSeed.icon.setAlpha(inv.knowledgeSeeds > 0 ? 1 : 0.4);
       this.invSlots.knowledgeHerb.count.setText(`${inv.knowledgeHerbs}`);
       this.invSlots.knowledgeHerb.icon.setAlpha(inv.knowledgeHerbs > 0 ? 1 : 0.4);
+    }
+
+    // Emotion items appear once unlocked (Stage 4).
+    const emotionUnlocked =
+      state.tutorial.receivedEmotionSeeds || inv.emotionSeeds > 0 || inv.emotionFlowers > 0;
+    this.setSlotVisible('emotionSeed', emotionUnlocked);
+    this.setSlotVisible('emotionFlower', emotionUnlocked);
+    if (emotionUnlocked) {
+      this.invSlots.emotionSeed.count.setText(`${inv.emotionSeeds}`);
+      this.invSlots.emotionSeed.icon.setAlpha(inv.emotionSeeds > 0 ? 1 : 0.4);
+      this.invSlots.emotionFlower.count.setText(`${inv.emotionFlowers}`);
+      this.invSlots.emotionFlower.icon.setAlpha(inv.emotionFlowers > 0 ? 1 : 0.4);
     }
 
     this.archiveText.setText(
@@ -319,7 +334,8 @@ export default class UIScene extends Phaser.Scene {
     const body = note.body
       .replace('{n}', state.archive.memoryBerriesArchived)
       .replace('{d}', state.grove ? state.grove.dreamBloomsOffered : 0)
-      .replace('{k}', state.cortex ? state.cortex.knowledgeHerbsStored : 0);
+      .replace('{k}', state.cortex ? state.cortex.knowledgeHerbsStored : 0)
+      .replace('{e}', state.amygdala ? state.amygdala.emotionFlowersOffered : 0);
     this.fieldNotesTitle.setText(note.title);
     this.fieldNotesBody.setText(body);
   }
@@ -569,6 +585,8 @@ export default class UIScene extends Phaser.Scene {
       S: 0x6b4a2a,
       B: 0x5a4a8c,
       K: 0x6a6a3a,
+      E: 0x8a4a5a,
+      Z: 0xe0688c,
       W: 0x3a4a8c,
       C: 0xd08a6a,
       A: 0x6a8ad0,
@@ -666,7 +684,7 @@ export default class UIScene extends Phaser.Scene {
     c.add(dim);
 
     const panelW = 884;
-    const panelH = 580;
+    const panelH = 604;
     const px = (w - panelW) / 2;
     const py = (h - panelH) / 2;
     const panel = this.add.graphics();
@@ -690,14 +708,16 @@ export default class UIScene extends Phaser.Scene {
     c.add(title);
     c.add(sub);
 
-    // 2 columns x N rows of entry cards (sized to fit the panel).
+    // 2 columns x N rows of entry cards, sized to fit the panel for any count.
     const cols = 2;
     const cardW = 412;
-    const cardH = 110;
     const gapX = 20;
     const gapY = 10;
     const gridX = px + 28;
-    const gridY = py + 60;
+    const gridY = py + 56;
+    const nRows = Math.ceil(CODEX_ENTRIES.length / cols);
+    const gridAvail = panelH - 56 - 34; // below header, above footer
+    const cardH = Math.floor((gridAvail - (nRows - 1) * gapY) / nRows);
 
     CODEX_ENTRIES.forEach((entry, i) => {
       const col = i % cols;

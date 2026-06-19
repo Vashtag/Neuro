@@ -78,5 +78,10 @@ export const PALETTE = {
   axonGate: 0x6a5ad0,
   axonGateGlow: 0xc8b6ff,
   knowledgeCrop: 0x86a64a,
-  knowledgeCropReady: 0xd2e08a
+  knowledgeCropReady: 0xd2e08a,
+  // Emotion / Amygdala (Stage 4)
+  emotionCrop: 0xe0688c,
+  emotionCropReady: 0xff9ab8,
+  amygdalaDim: 0x7a3a4e,
+  amygdalaGlow: 0xff9ab8
 };

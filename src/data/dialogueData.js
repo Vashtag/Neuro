@@ -208,9 +208,25 @@ export const FIELD_NOTES = {
     title: 'Field Notes',
     body: 'Store Knowledge Herbs in the Cortex Library.\n\nStored: {k}/3'
   },
+  find_emotion: {
+    title: 'Field Notes',
+    body: 'Emotion Flowers now stir by the Dream Pond.\n\nOpen the Emotion Cache there for seeds.'
+  },
+  grow_emotion: {
+    title: 'Field Notes',
+    body: 'Grow Emotion Flowers by the Dream Pond.\n\nHint:\nThey bloom vivid and fast — just one night.'
+  },
+  harvest_emotion: {
+    title: 'Field Notes',
+    body: 'Harvest the bright Emotion Flowers.'
+  },
+  offer_emotion: {
+    title: 'Field Notes',
+    body: 'Bring Emotion Flowers to the Amygdala.\n\nOffered: {e}/3'
+  },
   complete: {
     title: 'Field Notes',
-    body: 'The Cortex remembers.\n\nMemory, dreams, and knowledge all grow in Neurobloom now.\nMore regions coming soon.'
+    body: 'Every kind of memory grows in Neurobloom now —\nepisodic, sleeping, semantic, and felt.\n\nThank you for tending the garden.'
   }
 };
 
@@ -233,10 +249,26 @@ export const DREAM_MESSAGES = {
   restored: 'The Dream Altar awakens. Synapse Grove settles into rest.'
 };
 
-// Stage 3 finale: Cortex Library filled.
+// Stage 3 -> 4 transition: Cortex Library filled.
 export const CORTEX_COMPLETION_TEXT = {
   title: 'The Cortex Remembers',
-  body: 'The Library shelves fill with stored knowledge.\n\nEnd of current build. Thanks for tending Neurobloom.'
+  body: 'The Library shelves fill with stored knowledge.\n\nBut the deepest memories are felt — Emotion Flowers now stir by the Dream Pond.'
+};
+
+// Stage 4 finale: the Amygdala awakened — the true ending.
+export const FINAL_COMPLETION_TEXT = {
+  title: 'A Garden of Memory',
+  body: 'Episodic, sleeping, semantic, and felt — every kind of memory blooms in Neurobloom now.\n\nThank you for tending the garden. End of current build.'
+};
+
+// Emotion Cache + Amygdala action messages.
+export const EMOTION_MESSAGES = {
+  cacheLocked: 'The flowers stay shut until the Cortex remembers.',
+  cache: 'The Emotion Cache opens: 5 Emotion Seeds. Plant them by the pond.',
+  cacheEmpty: 'The Emotion Cache is empty. Go grow what you took.',
+  offerWaiting: 'The Amygdala is quiet. Bring it Emotion Flowers.',
+  offer: (n) => `Offered ${n} Emotion ${n === 1 ? 'Flower' : 'Flowers'} to the Amygdala.`,
+  complete: 'The Amygdala glows. Every feeling has a place to rest.'
 };
 
 // Knowledge Cache + Cortex Library action messages.

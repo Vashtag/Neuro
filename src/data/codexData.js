@@ -84,6 +84,26 @@ export const CODEX_ENTRIES = [
       'The cortex stores well-learned knowledge for the long term, organised in repeating ' +
       'columns of neurons. The hippocampus trains it through repeated replay.',
     discovered: (s) => s.tutorial.reachedCortex
+  },
+  {
+    id: 'emotion_flower',
+    title: 'Emotion Flower',
+    concept: 'Emotional Memory',
+    icon: GEN_KEYS.iconEmotionFlower,
+    body:
+      'Emotionally charged events are recorded faster and more vividly — sometimes after a ' +
+      'single moment. Strong feelings make a memory hard to forget.',
+    discovered: (s) => s.tutorial.harvestedFirstEmotion
+  },
+  {
+    id: 'amygdala',
+    title: 'The Amygdala',
+    concept: 'Emotional Core',
+    icon: TEXTURE_KEYS.amygdala,
+    body:
+      'The amygdala flags experiences with emotion and signals the hippocampus to remember ' +
+      'them more strongly. Feeling and memory are deeply intertwined.',
+    discovered: (s) => s.amygdala && s.amygdala.complete
   }
 ];
 

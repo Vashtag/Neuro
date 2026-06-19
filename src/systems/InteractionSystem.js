@@ -75,7 +75,9 @@ export default class InteractionSystem {
       'sleep',
       'dream_altar',
       'cortex_library',
-      'knowledge_cache'
+      'knowledge_cache',
+      'amygdala',
+      'emotion_cache'
     ]);
     if (building) return { kind: building.type, zone: building };
 
@@ -150,6 +152,12 @@ export default class InteractionSystem {
         break;
       case 'knowledge_cache':
         this.handlers.onKnowledgeCache?.(target.zone);
+        break;
+      case 'amygdala':
+        this.handlers.onAmygdala?.(target.zone);
+        break;
+      case 'emotion_cache':
+        this.handlers.onEmotionCache?.(target.zone);
         break;
       case 'farm':
         this.handlers.onFarm?.(target.tile);

@@ -11,6 +11,7 @@ import {
   hasReadyCrop,
   carryingDreamBlooms,
   carryingKnowledgeHerbs,
+  carryingEmotionFlowers,
   hasReadyCropOfType
 } from '../data/gameState.js';
 import { selectHebbStage } from '../data/dialogueData.js';
@@ -24,7 +25,9 @@ import {
   ACTION_MESSAGES,
   DREAM_MESSAGES,
   KNOWLEDGE_MESSAGES,
-  CORTEX_COMPLETION_TEXT
+  EMOTION_MESSAGES,
+  CORTEX_COMPLETION_TEXT,
+  FINAL_COMPLETION_TEXT
 } from '../data/dialogueData.js';
 import { TEXTURE_KEYS } from '../data/assetManifest.js';
 import { CODEX_ENTRIES } from '../data/codexData.js';
@@ -89,9 +92,10 @@ export default class GameScene extends Phaser.Scene {
     // --- Archive ---
     this.archive = new ArchiveSystem(this);
 
-    // Restore the Dream Altar / Cortex Library glow if loading mid Stage 2-3.
+    // Restore the goal-building glows if loading mid Stage 2-4.
     this.updateAltarVisual(true);
     this.updateLibraryVisual(true);
+    this.updateAmygdalaVisual(true);
 
     // --- UI reference + interaction ---
     this.ui = this.scene.get(SCENES.UI);
@@ -164,6 +168,8 @@ export default class GameScene extends Phaser.Scene {
       onDreamAltar: () => this.onDreamAltar(),
       onCortexLibrary: () => this.onCortexLibrary(),
       onKnowledgeCache: () => this.onKnowledgeCache(),
+      onAmygdala: () => this.onAmygdala(),
+      onEmotionCache: () => this.onEmotionCache(),
       onSleep: () => this.daySystem.promptSleep(),
       onSign: (zone) => msg(zone.message || 'A weathered sign.', 3200),
       onFarm: (tile) => this.farming.doAction(tile),
@@ -321,12 +327,21 @@ export default class GameScene extends Phaser.Scene {
 
   // Stage 3 objective progression (Cortex).
   deriveCortexStep(s) {
-    if (s.cortex.complete) return 'complete';
+    if (s.cortex.complete) return this.deriveAmygdalaStep(s);
     if (!s.tutorial.reachedCortex) return 'cross_bridge';
     if (!s.tutorial.receivedKnowledgeSeeds) return 'find_cache';
     if (carryingKnowledgeHerbs(s)) return 'store_knowledge';
     if (hasReadyCropOfType(s, 'knowledge_herb')) return 'harvest_knowledge';
     return 'grow_knowledge';
+  }
+
+  // Stage 4 objective progression (Emotion / Amygdala).
+  deriveAmygdalaStep(s) {
+    if (s.amygdala.complete) return 'complete';
+    if (!s.tutorial.receivedEmotionSeeds) return 'find_emotion';
+    if (carryingEmotionFlowers(s)) return 'offer_emotion';
+    if (hasReadyCropOfType(s, 'emotion_flower')) return 'harvest_emotion';
+    return 'grow_emotion';
   }
 
   // Offer carried Dream Blooms to the Dream Altar (Stage 2 goal).
@@ -459,6 +474,79 @@ export default class GameScene extends Phaser.Scene {
       this.updateFieldNotes(); // -> find_cache
       this.ui.showMessage('The Cortex. Facts grow here — loud, stubborn, and easily forgotten.', 3000);
     }
+  }
+
+  // --- Stage 4: Emotion Flowers / Amygdala ---
+
+  // Emotion Cache (by the Dream Pond): hands over Emotion Seeds once the Cortex
+  // is complete.
+  onEmotionCache() {
+    if (!this.state.cortex.complete) {
+      this.ui.showMessage(EMOTION_MESSAGES.cacheLocked);
+      this.sfx('unavailable');
+      return;
+    }
+    if (this.state.tutorial.receivedEmotionSeeds) {
+      this.ui.showMessage(EMOTION_MESSAGES.cacheEmpty);
+      this.sfx('unavailable');
+      return;
+    }
+    this.state.inventory.emotionSeeds = 5;
+    this.state.tutorial.receivedEmotionSeeds = true;
+    this.sfx('plant');
+    this.syncUI(['emotionSeed']);
+    this.updateFieldNotes();
+    this.ui.showMessage(EMOTION_MESSAGES.cache, 3200);
+  }
+
+  // Amygdala: offer carried Emotion Flowers (Stage 4 goal / true ending).
+  onAmygdala() {
+    const am = this.state.amygdala;
+    const inv = this.state.inventory;
+    const carried = inv.emotionFlowers;
+
+    if (carried <= 0) {
+      this.ui.showMessage(EMOTION_MESSAGES.offerWaiting);
+      this.sfx('unavailable');
+      return;
+    }
+
+    inv.emotionFlowers = 0;
+    am.emotionFlowersOffered = Math.min(am.emotionFlowersOffered + carried, am.requiredEmotionFlowers);
+    this.state.tutorial.offeredFirstEmotion = true;
+
+    this.sfx('archive');
+    this.updateAmygdalaVisual();
+    this.syncUI(['emotionFlower']);
+    this.updateFieldNotes();
+
+    const n = am.emotionFlowersOffered;
+    this.ui.showMessage(`${EMOTION_MESSAGES.offer(carried)} (${n}/${am.requiredEmotionFlowers})`, 2600);
+
+    if (n >= am.requiredEmotionFlowers && !am.complete) {
+      am.complete = true;
+      this.time.delayedCall(900, () => this.handleGameComplete());
+    }
+  }
+
+  updateAmygdalaVisual(instant = false) {
+    const glow = this.map.amygdalaGlowSprite;
+    if (!glow) return;
+    const am = this.state.amygdala;
+    const ratio = am.emotionFlowersOffered / am.requiredEmotionFlowers;
+    if (instant) glow.setAlpha(ratio);
+    else this.tweens.add({ targets: glow, alpha: ratio, duration: 700, ease: 'Sine.easeInOut' });
+  }
+
+  // The true finale: every kind of memory now grows.
+  handleGameComplete() {
+    this.sfx('fogClear');
+    this.updateFieldNotes(); // -> complete
+    this.ui.showMessage(EMOTION_MESSAGES.complete, 2600);
+    this.player.setInputLocked(true);
+    this.time.delayedCall(1200, () => {
+      this.ui.showCompletion(FINAL_COMPLETION_TEXT.title, FINAL_COMPLETION_TEXT.body);
+    });
   }
 
   // --- Dr. Hebb dialogue ---
