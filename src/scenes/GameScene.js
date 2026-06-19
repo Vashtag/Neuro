@@ -19,6 +19,7 @@ import DaySystem from '../systems/DaySystem.js';
 import ArchiveSystem from '../systems/ArchiveSystem.js';
 import SoundManager from '../systems/SoundManager.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
+import { Settings } from '../systems/Settings.js';
 import {
   ACTION_MESSAGES,
   DREAM_MESSAGES,
@@ -44,6 +45,7 @@ export default class GameScene extends Phaser.Scene {
 
     // --- Audio (synthesized; resumes on first input) ---
     this.soundManager = new SoundManager();
+    Settings.apply(Settings.load(), this.soundManager);
     const wakeAudio = () => {
       this.soundManager.ensureContext();
       this.soundManager.startAmbient();
@@ -104,6 +106,16 @@ export default class GameScene extends Phaser.Scene {
     this.resetKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.muteKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M);
     this.codexKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J);
+    this.menuNav = this.input.keyboard.addKeys({
+      up: Phaser.Input.Keyboard.KeyCodes.W,
+      up2: Phaser.Input.Keyboard.KeyCodes.UP,
+      down: Phaser.Input.Keyboard.KeyCodes.S,
+      down2: Phaser.Input.Keyboard.KeyCodes.DOWN,
+      left: Phaser.Input.Keyboard.KeyCodes.A,
+      left2: Phaser.Input.Keyboard.KeyCodes.LEFT,
+      right: Phaser.Input.Keyboard.KeyCodes.D,
+      right2: Phaser.Input.Keyboard.KeyCodes.RIGHT
+    });
 
     // --- Day / sleep system ---
     this.daySystem = new DaySystem(this);
@@ -261,6 +273,40 @@ export default class GameScene extends Phaser.Scene {
     this.player.setInputLocked(true);
     this.ui.openCodex(this.state);
     this.sfx('dialogue');
+  }
+
+  // Snapshot of menu navigation keys (each JustDown read once per frame).
+  navKeys() {
+    const JD = Phaser.Input.Keyboard.JustDown;
+    const m = this.menuNav;
+    return {
+      up: JD(m.up) || JD(m.up2),
+      down: JD(m.down) || JD(m.down2),
+      left: JD(m.left) || JD(m.left2),
+      right: JD(m.right) || JD(m.right2),
+      confirm: JD(this.interactKeys[0]) || JD(this.interactKeys[1]),
+      back: JD(this.escKey)
+    };
+  }
+
+  openPause() {
+    this.player.setInputLocked(true);
+    this.sfx('dialogue');
+    this.ui.openPause();
+  }
+
+  resumeGame() {
+    this.ui.closePause();
+    this.player.setInputLocked(false);
+  }
+
+  // Return to the title screen (autosaves first; ends the in-game scenes).
+  returnToTitle() {
+    this.autosave();
+    if (this.soundManager) this.soundManager.stopAmbient();
+    this.ui.closePause();
+    this.scene.stop(SCENES.UI);
+    this.scene.start(SCENES.MENU);
   }
 
   // Stage 2 objective progression (post-fog).
@@ -488,6 +534,32 @@ export default class GameScene extends Phaser.Scene {
       this.ui.showMessage(this.audioMuted ? 'Sound off' : 'Sound on', 1200);
     }
 
+    // Settings overlay (in-game) — captures all nav while open.
+    if (this.ui.isSettingsActive()) {
+      this.ui.settingsHandle(this.navKeys());
+      this.interaction.setPromptVisible(false);
+      this.updateProbe(this.probeSnapshot());
+      return;
+    }
+
+    // Pause menu.
+    if (this.ui.isPauseActive()) {
+      const n = this.navKeys();
+      if (n.up) this.ui.pauseMove(-1);
+      else if (n.down) this.ui.pauseMove(1);
+      if (n.confirm) {
+        const id = this.ui.pauseSelectedId();
+        if (id === 'resume') this.resumeGame();
+        else if (id === 'settings') this.ui.openSettings();
+        else if (id === 'title') this.returnToTitle();
+      } else if (n.back) {
+        this.resumeGame();
+      }
+      this.interaction.setPromptVisible(false);
+      this.updateProbe(this.probeSnapshot());
+      return;
+    }
+
     // While the Field Guide is open, J or Esc closes it.
     if (this.ui.isCodexActive()) {
       if (
@@ -551,6 +623,13 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    // Esc opens the pause menu (no other modal is active here).
+    if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
+      this.openPause();
+      this.updateProbe(this.probeSnapshot());
+      return;
+    }
+
     this.interaction.update();
     this.checkTeaserReached();
     this.checkCortexReached();
@@ -579,7 +658,9 @@ export default class GameScene extends Phaser.Scene {
       metHebb: this.state.tutorial.metDrHebb,
       fieldNotes: this.state.fieldNotesStep,
       codexActive: this.ui.isCodexActive(),
-      codexSeen: this.state.codex.seen.length
+      codexSeen: this.state.codex.seen.length,
+      paused: this.ui.isPauseActive(),
+      settingsOpen: this.ui.isSettingsActive()
     };
   }
 
